@@ -38,12 +38,12 @@ func NewLocalRunner() *Local {
 }
 
 // NB:
-// Cannot implement setupPipe as interface, implementing Local and Remote:
-// Interface mistmatch:
+// Cannot implement abstract setupPipe as interface, implementing Local and Remote;
+// interface mistmatch:
 // ssh.Session.StderrPipe() - io.Reader()
 // exec.Cmd.StderrPipe() - io.ReadCloser()
 
-func (local *Local) Start(cmd string) (*Command, error) {
+func (this *Local) Start(cmd string) (*Command, error) {
 	cmdAndArgs := strings.Split(cmd, " ")
 	c := exec.Command(cmdAndArgs[0], cmdAndArgs[1:]...)
 	stdin, err := c.StdinPipe()
@@ -61,13 +61,13 @@ func (local *Local) Start(cmd string) (*Command, error) {
 	if err := c.Start(); err != nil {
 		return nil, err
 	}
-	local.Cmd = c
-	local.StdStreams = Command{stdin, stdout, stderr}
-	return &local.StdStreams, nil
+	this.Cmd = c
+	this.StdStreams = Command{stdin, stdout, stderr}
+	return &this.StdStreams, nil
 }
 
-func (local *Local) Run(cmd string) ([]string, error) {
-	c, err := local.Start(cmd)
+func (this *Local) Run(cmd string) ([]string, error) {
+	c, err := this.Start(cmd)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (local *Local) Run(cmd string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := local.WaitCmd(); err != nil {
+	if err := this.WaitCmd(); err != nil {
 		return nil, err
 	}
 	if len(bOut) > 0 {
@@ -115,8 +115,8 @@ func NewRemoteRunner(user, host, key string) (*Remote, error) {
 	return &Remote{Server: server}, nil
 }
 
-func (remote *Remote) Start(cmd string) (*Command, error) {
-	s, err := remote.Server.NewSession()
+func (this *Remote) Start(cmd string) (*Command, error) {
+	s, err := this.Server.NewSession()
 	if err != nil {
 		return nil, err
 	}
@@ -135,13 +135,13 @@ func (remote *Remote) Start(cmd string) (*Command, error) {
 	if err := s.Start(cmd); err != nil {
 		return nil, err
 	}
-	remote.Cmd = s
-	remote.StdStreams = Command{stdin, stdout, stderr}
-	return &remote.StdStreams, nil
+	this.Cmd = s
+	this.StdStreams = Command{stdin, stdout, stderr}
+	return &this.StdStreams, nil
 }
 
-func (remote *Remote) Run(cmd string) ([]string, error) {
-	c, err := remote.Start(cmd)
+func (this *Remote) Run(cmd string) ([]string, error) {
+	c, err := this.Start(cmd)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +149,7 @@ func (remote *Remote) Run(cmd string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := remote.WaitCmd(); err != nil {
+	if err := this.WaitCmd(); err != nil {
 		return nil, err
 	}
 	if len(bOut) > 0 {
