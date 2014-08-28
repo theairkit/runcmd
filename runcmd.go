@@ -23,14 +23,14 @@ type Command struct {
 }
 
 type Local struct {
-	Cmd *exec.Cmd
-	IOE Command
+	Cmd        *exec.Cmd
+	StdStreams Command
 }
 
 type Remote struct {
-	Server *ssh.Client
-	Cmd    *ssh.Session
-	IOE    Command
+	Server     *ssh.Client
+	Cmd        *ssh.Session
+	StdStreams Command
 }
 
 func NewLocalRunner() *Local {
@@ -76,8 +76,8 @@ func (local *Local) Start(cmd string) (*Command, error) {
 		return nil, err
 	}
 	local.Cmd = c
-	local.IOE = Command{stdin, stdout, stderr}
-	return &local.IOE, nil
+	local.StdStreams = Command{stdin, stdout, stderr}
+	return &local.StdStreams, nil
 }
 
 func (remote *Remote) Start(cmd string) (*Command, error) {
@@ -101,8 +101,8 @@ func (remote *Remote) Start(cmd string) (*Command, error) {
 		return nil, err
 	}
 	remote.Cmd = s
-	remote.IOE = Command{stdin, stdout, stderr}
-	return &remote.IOE, nil
+	remote.StdStreams = Command{stdin, stdout, stderr}
+	return &remote.StdStreams, nil
 }
 
 func (local *Local) Run(cmd string) ([]string, error) {
@@ -142,7 +142,7 @@ func (remote *Remote) Run(cmd string) ([]string, error) {
 }
 
 func (this *Local) WaitCmd() error {
-	bErr, err := ioutil.ReadAll(this.IOE.Stderr)
+	bErr, err := ioutil.ReadAll(this.StdStreams.Stderr)
 	if err != nil {
 		return errors.New(this.Cmd.Wait().Error() + "\n" + err.Error())
 	}
@@ -153,7 +153,7 @@ func (this *Local) WaitCmd() error {
 }
 
 func (this *Remote) WaitCmd() error {
-	bErr, err := ioutil.ReadAll(this.IOE.Stderr)
+	bErr, err := ioutil.ReadAll(this.StdStreams.Stderr)
 	if err != nil {
 		return errors.New(this.Cmd.Wait().Error() + "\n" + err.Error())
 	}
