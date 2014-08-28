@@ -37,6 +37,12 @@ func NewLocalRunner() *Local {
 	return &Local{}
 }
 
+// NB:
+// Cannot implement setupPipe as interface, implementing Local and Remote:
+// Interface mistmatch:
+// ssh.Session.StderrPipe() - io.Reader()
+// exec.Cmd.StderrPipe() - io.ReadCloser()
+
 func (local *Local) Start(cmd string) (*Command, error) {
 	cmdAndArgs := strings.Split(cmd, " ")
 	c := exec.Command(cmdAndArgs[0], cmdAndArgs[1:]...)
