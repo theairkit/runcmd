@@ -37,26 +37,6 @@ func NewLocalRunner() *Local {
 	return &Local{}
 }
 
-func NewRemoteRunner(user, host, key string) (*Remote, error) {
-	bs, err := ioutil.ReadFile(key)
-	if err != nil {
-		return nil, err
-	}
-	signer, err := ssh.ParsePrivateKey(bs)
-	if err != nil {
-		return nil, err
-	}
-	config := &ssh.ClientConfig{
-		User: user,
-		Auth: []ssh.AuthMethod{ssh.PublicKeys(signer)},
-	}
-	server, err := ssh.Dial("tcp", host, config)
-	if err != nil {
-		return nil, err
-	}
-	return &Remote{Server: server}, nil
-}
-
 func (local *Local) Start(cmd string) (*Command, error) {
 	cmdAndArgs := strings.Split(cmd, " ")
 	c := exec.Command(cmdAndArgs[0], cmdAndArgs[1:]...)
@@ -78,6 +58,55 @@ func (local *Local) Start(cmd string) (*Command, error) {
 	local.Cmd = c
 	local.StdStreams = Command{stdin, stdout, stderr}
 	return &local.StdStreams, nil
+}
+
+func (local *Local) Run(cmd string) ([]string, error) {
+	c, err := local.Start(cmd)
+	if err != nil {
+		return nil, err
+	}
+	bOut, err := ioutil.ReadAll(c.Stdout)
+	if err != nil {
+		return nil, err
+	}
+	if err := local.WaitCmd(); err != nil {
+		return nil, err
+	}
+	if len(bOut) > 0 {
+		return strings.Split(strings.Trim(string(bOut), "\n"), "\n"), nil
+	}
+	return nil, nil
+}
+
+func (this *Local) WaitCmd() error {
+	bErr, err := ioutil.ReadAll(this.StdStreams.Stderr)
+	if err != nil {
+		return errors.New(this.Cmd.Wait().Error() + "\n" + err.Error())
+	}
+	if len(bErr) > 0 {
+		return errors.New(this.Cmd.Wait().Error() + "\n" + string(bErr))
+	}
+	return this.Cmd.Wait()
+}
+
+func NewRemoteRunner(user, host, key string) (*Remote, error) {
+	bs, err := ioutil.ReadFile(key)
+	if err != nil {
+		return nil, err
+	}
+	signer, err := ssh.ParsePrivateKey(bs)
+	if err != nil {
+		return nil, err
+	}
+	config := &ssh.ClientConfig{
+		User: user,
+		Auth: []ssh.AuthMethod{ssh.PublicKeys(signer)},
+	}
+	server, err := ssh.Dial("tcp", host, config)
+	if err != nil {
+		return nil, err
+	}
+	return &Remote{Server: server}, nil
 }
 
 func (remote *Remote) Start(cmd string) (*Command, error) {
@@ -105,24 +134,6 @@ func (remote *Remote) Start(cmd string) (*Command, error) {
 	return &remote.StdStreams, nil
 }
 
-func (local *Local) Run(cmd string) ([]string, error) {
-	c, err := local.Start(cmd)
-	if err != nil {
-		return nil, err
-	}
-	bOut, err := ioutil.ReadAll(c.Stdout)
-	if err != nil {
-		return nil, err
-	}
-	if err := local.WaitCmd(); err != nil {
-		return nil, err
-	}
-	if len(bOut) > 0 {
-		return strings.Split(strings.Trim(string(bOut), "\n"), "\n"), nil
-	}
-	return nil, nil
-}
-
 func (remote *Remote) Run(cmd string) ([]string, error) {
 	c, err := remote.Start(cmd)
 	if err != nil {
@@ -139,17 +150,6 @@ func (remote *Remote) Run(cmd string) ([]string, error) {
 		return strings.Split(strings.Trim(string(bOut), "\n"), "\n"), nil
 	}
 	return nil, nil
-}
-
-func (this *Local) WaitCmd() error {
-	bErr, err := ioutil.ReadAll(this.StdStreams.Stderr)
-	if err != nil {
-		return errors.New(this.Cmd.Wait().Error() + "\n" + err.Error())
-	}
-	if len(bErr) > 0 {
-		return errors.New(this.Cmd.Wait().Error() + "\n" + string(bErr))
-	}
-	return this.Cmd.Wait()
 }
 
 func (this *Remote) WaitCmd() error {
