@@ -27,12 +27,12 @@ func main() {
 		fmt.Println(err.Error())
 		return
 	}
-	// Output is a slise of strings; it is pretty for parsing
+	// Output is a slice of strings; it is pretty for parsing etc.
 	for _, i := range out {
 		fmt.Println(i)
 	}
 
-	// Run remote command: only ssh with key-auth (rsa/dsa) supported:
+	// Run remote command:
 	rRunner, err := runcmd.NewRemoteRunner("mike", "10.10.0.3:22", "/Users/mike/.ssh/id_rsa")
 	if err != nil {
 		fmt.Println(err.Error())
@@ -43,7 +43,7 @@ func main() {
 		fmt.Println(err.Error())
 		return
 	}
-	// Output of remote also slice fo strings:
+	// Output of remote also slice of strings:
 	for _, i := range out {
 		fmt.Println(i)
 	}
