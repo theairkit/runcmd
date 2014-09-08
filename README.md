@@ -1,4 +1,6 @@
-runcmd package helps you run shell commands locally ro on some remote host.
+runcmd golang package helps you run shell commands on local or remote host.
+
+Note: for remote commands only ssh-key-auth (rsa/dsa) supported
 
 http://godoc.org/github.com/theairkit/runcmd
 
