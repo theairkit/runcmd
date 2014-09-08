@@ -4,6 +4,8 @@ http://godoc.org/github.com/theairkit/runcmd
 
 Example of usage:
 
+
+```go
 package main
 
 import (
@@ -55,10 +57,12 @@ func main() {
 	   c.Stderr
 	*/
 
-	// The Wait return the exit code
+	// WaitCmd return the exit code
 	// and release resources once the command exits:
 	if err := rRunner.WaitCmd(); err != nil {
 		fmt.Println(err.Error())
 		return
 	}
 }
+
+```
