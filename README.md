@@ -50,7 +50,6 @@ func main() {
 	}
 
 	/*
-	   Do some staff here;
 	   We can work here with:
 	   c.Stdout
 	   c.Stdin
