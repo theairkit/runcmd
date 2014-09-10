@@ -22,71 +22,9 @@ var (
 
 func TestLocalRun(t *testing.T) {
 	lRunner := NewLocalRunner()
-
-	// Valid command with valid keys:
-	out, err := lRunner.Run(cmdValid)
-	if err != nil {
+	if err := testRun(lRunner); err != nil {
 		t.Error(err)
 	}
-	for _, i := range out {
-		fmt.Println(i)
-	}
-
-	// Valid command with invalid keys:
-	if _, err = lRunner.Run(cmdInvalidKey); err != nil {
-		fmt.Println(err.Error())
-	} else {
-		t.Error(cmdInvalidKey + ": no invalid keys for command, use another to pass  test")
-	}
-
-	// Invalid command:
-	if _, err = lRunner.Run(cmdInvalid); err != nil {
-		fmt.Println(err.Error())
-		return
-	}
-	t.Error(errors.New(cmdInvalid + ": command exists, use another to pass test"))
-}
-
-func TestLocalStartWait(t *testing.T) {
-	lRunner := NewLocalRunner()
-
-	// Valid command with valid keys:
-	cmd, err := lRunner.Start(cmdValid)
-	if err != nil {
-		t.Fatal(err)
-	}
-	bufStdOut := new(bytes.Buffer)
-	bufStdOut.ReadFrom(cmd.Stdout)
-	for _, s := range strings.Split(bufStdOut.String(), "\n") {
-		fmt.Println(s)
-	}
-	if err := lRunner.WaitCmd(); err != nil {
-		t.Error(err)
-	}
-
-	// Valid command with invalid keys:
-	cmd, err = lRunner.Start(cmdInvalidKey)
-	if err != nil {
-		t.Fatal(err)
-	}
-	bufStdOut = new(bytes.Buffer)
-	bufStdOut.ReadFrom(cmd.Stdout)
-	for _, s := range strings.Split(bufStdOut.String(), "\n") {
-		fmt.Println(s)
-	}
-	if err := lRunner.WaitCmd(); err != nil {
-		fmt.Println(err.Error())
-	} else {
-		t.Error(cmdInvalidKey + ": no invalid keys for command, use another to pass  test")
-	}
-
-	// Invalid command:
-	cmd, err = lRunner.Start(cmdInvalid)
-	if err != nil {
-		fmt.Println(err.Error())
-		return
-	}
-	t.Error(errors.New(cmdInvalid + ": command exists, use another to pass test"))
 }
 
 func TestRemoteRun(t *testing.T) {
@@ -94,29 +32,17 @@ func TestRemoteRun(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-
-	// Valid command with valid keys:
-	out, err := rRunner.Run(cmdValid)
-	if err != nil {
+	if err := testRun(rRunner); err != nil {
 		t.Error(err)
 	}
-	for _, i := range out {
-		fmt.Println(i)
-	}
+}
 
-	// Valid command with invalid keys:
-	if _, err = rRunner.Run(cmdInvalidKey); err != nil {
-		fmt.Println(err.Error())
-	} else {
-		t.Error(cmdInvalidKey + ": no invalid keys for command, use another to pass  test")
+func TestLocalStartWait(t *testing.T) {
+	lRunner := NewLocalRunner()
+	if err := testStartWait(lRunner); err != nil {
+		t.Error(err)
 	}
-
-	// Invalid command:
-	if _, err = rRunner.Run(cmdInvalid); err != nil {
-		fmt.Println(err.Error())
-		return
-	}
-	t.Error(errors.New(cmdInvalid + ": command exists, use another to pass test"))
+	return
 }
 
 func TestRemoteStartWait(t *testing.T) {
@@ -124,89 +50,126 @@ func TestRemoteStartWait(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-
-	// Valid command with valid keys:
-	cmd, err := rRunner.Start(cmdValid)
-	if err != nil {
+	if err := testStartWait(rRunner); err != nil {
 		t.Error(err)
+	}
+}
+
+func TestPipeLocal2Remote(t *testing.T) {
+	if err := testPipe(true); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestPipeRemote2Local(t *testing.T) {
+	if err := testPipe(false); err != nil {
+		t.Error(err)
+	}
+}
+
+func testRun(runner Runner) error {
+	// Valid command with valid keys:
+	out, err := runner.Run(cmdValid)
+	if err != nil {
+		return err
+	}
+	for _, i := range out {
+		fmt.Println(i)
+	}
+
+	// Valid command with invalid keys:
+	if _, err = runner.Run(cmdInvalidKey); err != nil {
+		fmt.Println(err.Error())
+	} else {
+		return errors.New(cmdInvalidKey + ": no invalid keys for command, use another to pass  test")
+	}
+
+	// Invalid command:
+	if _, err = runner.Run(cmdInvalid); err != nil {
+		fmt.Println(err.Error())
+		return nil
+	}
+	return errors.New(cmdInvalid + ": command exists, use another to pass test")
+}
+
+func testStartWait(runner Runner) error {
+	// Valid command with valid keys:
+	cmd, err := runner.Start(cmdValid)
+	if err != nil {
+		return err
 	}
 	bufStdOut := new(bytes.Buffer)
 	bufStdOut.ReadFrom(cmd.Stdout)
 	for _, s := range strings.Split(bufStdOut.String(), "\n") {
 		fmt.Println(s)
 	}
-	if err := rRunner.WaitCmd(); err != nil {
-		t.Error(err)
+	if err := runner.WaitCmd(); err != nil {
+		return err
 	}
 
 	// Valid command with invalid keys:
-	cmd, err = rRunner.Start(cmdInvalidKey)
+	cmd, err = runner.Start(cmdInvalidKey)
 	if err != nil {
-		t.Fatal(err)
+		return err
 	}
 	bufStdOut = new(bytes.Buffer)
 	bufStdOut.ReadFrom(cmd.Stdout)
 	for _, s := range strings.Split(bufStdOut.String(), "\n") {
 		fmt.Println(s)
 	}
-	if err := rRunner.WaitCmd(); err != nil {
+	if err := runner.WaitCmd(); err != nil {
 		fmt.Println(err.Error())
 	} else {
-		t.Error(cmdInvalidKey + ": no invalid keys for command, use another to pass  test")
+		return errors.New(cmdInvalidKey + ": no invalid keys for command, use another to pass  test")
 	}
 
 	// Invalid command:
-	cmd, err = rRunner.Start(cmdInvalid)
+	cmd, err = runner.Start(cmdInvalid)
 	if err != nil {
-		t.Fatal(err)
-	}
-	if err := rRunner.WaitCmd(); err != nil {
 		fmt.Println(err.Error())
-		return
+		return nil
 	}
-	t.Error(errors.New(cmdInvalid + ": command exists, use another to pass test"))
+	if err := runner.WaitCmd(); err != nil {
+		fmt.Println(err.Error())
+		return nil
+	}
+	return errors.New(cmdInvalid + ": command exists, use another to pass test")
 }
 
-func TestPipeLocal2Remote(t *testing.T) {
+func testPipe(d bool) error {
 	lRunner := NewLocalRunner()
 	rRunner, err := NewRemoteRunner(user, host, key)
 	if err != nil {
-		t.Error(err)
+		return err
 	}
-	cmdLocal, err := lRunner.Start(cmdPipeOut)
-	if err != nil {
-		t.Fatal(err)
-	}
-	cmdRemote, err := rRunner.Start(cmdPipeIn)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err = io.Copy(cmdRemote.Stdin, cmdLocal.Stdout); err != nil {
-		t.Error(err)
-	}
-	if err := lRunner.WaitCmd(); err != nil {
-		t.Error(err)
-	}
-}
 
-func TestPipeRemote2Local(t *testing.T) {
-	lRunner := NewLocalRunner()
-	rRunner, err := NewRemoteRunner(user, host, key)
-	if err != nil {
-		t.Error(err)
+	// local2remote:
+	if d {
+		cmdLocal, err := lRunner.Start(cmdPipeOut)
+		if err != nil {
+			return err
+		}
+		cmdRemote, err := rRunner.Start(cmdPipeIn)
+		if err != nil {
+			return err
+		}
+		if _, err = io.Copy(cmdRemote.Stdin, cmdLocal.Stdout); err != nil {
+			return err
+		}
+		return lRunner.WaitCmd()
 	}
+
+	// remote2local:
 	cmdLocal, err := lRunner.Start(cmdPipeIn)
 	if err != nil {
-		t.Fatal(err)
+		return err
 	}
 	cmdRemote, err := rRunner.Start(cmdPipeOut)
 	if err != nil {
-		t.Fatal(err)
+		return err
 	}
 	if _, err = io.Copy(cmdLocal.Stdin, cmdRemote.Stdout); err != nil {
-		t.Error(err)
+		return err
 	}
-	if err := rRunner.WaitCmd(); err != nil {
-		t.Error(err)
-	}
+	return rRunner.WaitCmd()
 }
