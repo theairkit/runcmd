@@ -2,6 +2,7 @@ package runcmd
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os/exec"
@@ -166,5 +167,6 @@ func (this *Remote) WaitCmd() error {
 	if len(bErr) > 0 {
 		return errors.New(this.Cmd.Wait().Error() + "\n" + string(bErr))
 	}
+	fmt.Println("blah")
 	return this.Cmd.Wait()
 }
