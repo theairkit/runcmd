@@ -4,7 +4,7 @@ Note: for remote commands only ssh-key-auth (rsa/dsa) supported
 
 http://godoc.org/github.com/theairkit/runcmd
 
-Example of usage:
+Example of usage below (see also test_runcmd.go):
 
 
 ```go
