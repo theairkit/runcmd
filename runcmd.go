@@ -197,6 +197,7 @@ func NewRemoteRunner(user, host, key string) (*Remote, error) {
 		User: user,
 		Auth: []ssh.AuthMethod{ssh.PublicKeys(signer)},
 	}
+
 	server, err := ssh.Dial("tcp", host, config)
 	if err != nil {
 		return &Remote{}, err
