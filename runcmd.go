@@ -123,7 +123,6 @@ func (this *RemoteCmd) Run() ([]string, error) {
 	if err := this.Start(); err != nil {
 		return nil, err
 	}
-	//defer this.sshSesssion.Close()
 	bOut, err := ioutil.ReadAll(this.StdoutPipe)
 	if err != nil {
 		return nil, err
