@@ -2,7 +2,6 @@ package runcmd
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os/exec"
@@ -12,71 +11,63 @@ import (
 )
 
 type Runner interface {
-	Run(cmd string) ([]string, error)
-	Start(cmd string) (*Command, error)
-	WaitCmd() error
+	Command(cmd string) CmdWorker
 }
 
-type Command struct {
-	Stdin  io.Writer
-	Stdout io.Reader
-	Stderr io.Reader
+type CmdWorker interface {
+	Run() ([]string, error)
+	Start() error
+	Wait() error
+	Stdin() io.WriteCloser
+	Stdout() io.Reader
+	Stderr() io.Reader
+}
+
+type LocalCmd struct {
+	StdinPipe  io.WriteCloser
+	StdoutPipe io.Reader
+	StderrPipe io.Reader
+	cmd        *exec.Cmd
+}
+
+type RemoteCmd struct {
+	StdinPipe  io.WriteCloser
+	StdoutPipe io.Reader
+	StderrPipe io.Reader
+	cmd        string
+	session    *ssh.Session
 }
 
 type Local struct {
-	Cmd        *exec.Cmd
-	StdStreams Command
 }
 
 type Remote struct {
-	Server     *ssh.Client
-	Cmd        *ssh.Session
-	StdStreams Command
+	serverConn *ssh.Client
 }
 
-func NewLocalRunner() *Local {
-	return &Local{}
+func (this Local) Command(cmd string) CmdWorker {
+	c := strings.Split(cmd, " ")
+	return &LocalCmd{nil, nil, nil, exec.Command(c[0], c[1:]...)}
 }
 
-// NB:
-// Cannot implement abstract setupPipe as interface, implementing Local and Remote;
-// interface mistmatch:
-// ssh.Session.StderrPipe() - io.Reader()
-// exec.Cmd.StderrPipe() - io.ReadCloser()
-
-func (this *Local) Start(cmd string) (*Command, error) {
-	cmdAndArgs := strings.Split(cmd, " ")
-	c := exec.Command(cmdAndArgs[0], cmdAndArgs[1:]...)
-	stdin, err := c.StdinPipe()
+func (this Remote) Command(cmd string) CmdWorker {
+	session, err := this.serverConn.NewSession()
 	if err != nil {
-		return nil, err
+		return &RemoteCmd{}
 	}
-	stdout, err := c.StdoutPipe()
-	if err != nil {
-		return nil, err
-	}
-	stderr, err := c.StderrPipe()
-	if err != nil {
-		return nil, err
-	}
-	if err := c.Start(); err != nil {
-		return nil, err
-	}
-	this.Cmd = c
-	this.StdStreams = Command{stdin, stdout, stderr}
-	return &this.StdStreams, nil
+	return &RemoteCmd{nil, nil, nil, cmd, session}
 }
 
-func (this *Local) Run(cmd string) ([]string, error) {
-	c, err := this.Start(cmd)
+func (this *LocalCmd) Run() ([]string, error) {
+	err := this.Start()
 	if err != nil {
 		return nil, err
 	}
-	bOut, err := ioutil.ReadAll(c.Stdout)
+	bOut, err := ioutil.ReadAll(this.StdoutPipe)
 	if err != nil {
 		return nil, err
 	}
-	if err := this.WaitCmd(); err != nil {
+	if err := this.Wait(); err != nil {
 		return nil, err
 	}
 	if len(bOut) > 0 {
@@ -85,25 +76,123 @@ func (this *Local) Run(cmd string) ([]string, error) {
 	return nil, nil
 }
 
-func (this *Local) WaitCmd() error {
-	bErr, err := ioutil.ReadAll(this.StdStreams.Stderr)
+func (this *LocalCmd) Start() error {
+	var err error
+	this.StdinPipe, err = this.cmd.StdinPipe()
 	if err != nil {
-		return errors.New(this.Cmd.Wait().Error() + "\n" + err.Error())
+		return err
 	}
-	if len(bErr) > 0 {
-		return errors.New(this.Cmd.Wait().Error() + "\n" + string(bErr))
+	this.StdoutPipe, err = this.cmd.StdoutPipe()
+	if err != nil {
+		return err
 	}
-	return this.Cmd.Wait()
+	this.StderrPipe, err = this.cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+	return this.cmd.Start()
+}
+
+func (this *LocalCmd) Wait() error {
+	bErr, err := ioutil.ReadAll(this.StderrPipe)
+	if err != nil {
+		return err
+	}
+	if err := this.cmd.Wait(); err != nil {
+		if len(bErr) > 0 {
+			return errors.New(err.Error() + "\n" + string(bErr))
+		}
+		return err
+	}
+	return nil
+}
+
+func (this *LocalCmd) Stdin() io.WriteCloser {
+	return this.StdinPipe
+}
+
+func (this *LocalCmd) Stdout() io.Reader {
+	return this.StdoutPipe
+}
+
+func (this *LocalCmd) Stderr() io.Reader {
+	return this.StderrPipe
+}
+
+func (this *RemoteCmd) Run() ([]string, error) {
+	if err := this.Start(); err != nil {
+		return nil, err
+	}
+	//defer this.sshSesssion.Close()
+	bOut, err := ioutil.ReadAll(this.StdoutPipe)
+	if err != nil {
+		return nil, err
+	}
+	if err := this.Wait(); err != nil {
+		return nil, err
+	}
+	if len(bOut) > 0 {
+		return strings.Split(strings.Trim(string(bOut), "\n"), "\n"), nil
+	}
+	return nil, nil
+}
+
+func (this *RemoteCmd) Start() error {
+	var err error
+	this.StdinPipe, err = this.session.StdinPipe()
+	if err != nil {
+		return err
+	}
+	this.StdoutPipe, err = this.session.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	this.StderrPipe, err = this.session.StderrPipe()
+	if err != nil {
+		return err
+	}
+	return this.session.Start(this.cmd)
+}
+
+func (this *RemoteCmd) Wait() error {
+	defer this.session.Close()
+	bErr, err := ioutil.ReadAll(this.StderrPipe)
+	if err != nil {
+		return err
+	}
+	if err := this.session.Wait(); err != nil {
+		if len(bErr) > 0 {
+			return errors.New(err.Error() + "\n" + string(bErr))
+		}
+		return err
+	}
+	return nil
+}
+
+func (this *RemoteCmd) Stdin() io.WriteCloser {
+	return this.StdinPipe
+}
+
+func (this *RemoteCmd) Stdout() io.Reader {
+	return this.StdoutPipe
+}
+
+func (this *RemoteCmd) Stderr() io.Reader {
+	return this.StderrPipe
+}
+
+func NewLocalRunner() (*Local, error) {
+	return &Local{}, nil
 }
 
 func NewRemoteRunner(user, host, key string) (*Remote, error) {
 	bs, err := ioutil.ReadFile(key)
 	if err != nil {
-		return nil, err
+		return &Remote{}, err
 	}
 	signer, err := ssh.ParsePrivateKey(bs)
 	if err != nil {
-		return nil, err
+		return &Remote{}, err
 	}
 	config := &ssh.ClientConfig{
 		User: user,
@@ -111,62 +200,7 @@ func NewRemoteRunner(user, host, key string) (*Remote, error) {
 	}
 	server, err := ssh.Dial("tcp", host, config)
 	if err != nil {
-		return nil, err
+		return &Remote{}, err
 	}
-	return &Remote{Server: server}, nil
-}
-
-func (this *Remote) Start(cmd string) (*Command, error) {
-	s, err := this.Server.NewSession()
-	if err != nil {
-		return nil, err
-	}
-	stdin, err := s.StdinPipe()
-	if err != nil {
-		return nil, err
-	}
-	stdout, err := s.StdoutPipe()
-	if err != nil {
-		return nil, err
-	}
-	stderr, err := s.StderrPipe()
-	if err != nil {
-		return nil, err
-	}
-	if err := s.Start(cmd); err != nil {
-		return nil, err
-	}
-	this.Cmd = s
-	this.StdStreams = Command{stdin, stdout, stderr}
-	return &this.StdStreams, nil
-}
-
-func (this *Remote) Run(cmd string) ([]string, error) {
-	c, err := this.Start(cmd)
-	if err != nil {
-		return nil, err
-	}
-	bOut, err := ioutil.ReadAll(c.Stdout)
-	if err != nil {
-		return nil, err
-	}
-	if err := this.WaitCmd(); err != nil {
-		return nil, err
-	}
-	if len(bOut) > 0 {
-		return strings.Split(strings.Trim(string(bOut), "\n"), "\n"), nil
-	}
-	return nil, nil
-}
-
-func (this *Remote) WaitCmd() error {
-	bErr, err := ioutil.ReadAll(this.StdStreams.Stderr)
-	if err != nil {
-		return errors.New(this.Cmd.Wait().Error() + "\n" + err.Error())
-	}
-	if len(bErr) > 0 {
-		return errors.New(this.Cmd.Wait().Error() + "\n" + string(bErr))
-	}
-	fmt.Println("blah")
-	return this.Cmd.Wait()
+	return &Remote{server}, nil
 }
