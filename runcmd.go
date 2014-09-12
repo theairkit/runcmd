@@ -187,11 +187,11 @@ func NewLocalRunner() (*Local, error) {
 func NewRemoteRunner(user, host, key string) (*Remote, error) {
 	bs, err := ioutil.ReadFile(key)
 	if err != nil {
-		return &Remote{}, err
+		return nil, err
 	}
 	signer, err := ssh.ParsePrivateKey(bs)
 	if err != nil {
-		return &Remote{}, err
+		return nil, err
 	}
 	config := &ssh.ClientConfig{
 		User: user,
@@ -199,7 +199,7 @@ func NewRemoteRunner(user, host, key string) (*Remote, error) {
 	}
 	server, err := ssh.Dial("tcp", host, config)
 	if err != nil {
-		return &Remote{}, err
+		return nil, err
 	}
 	return &Remote{server}, nil
 }
