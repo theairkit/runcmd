@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -185,6 +186,9 @@ func NewLocalRunner() (*Local, error) {
 }
 
 func NewRemoteRunner(user, host, key string) (*Remote, error) {
+	if _, err := os.Stat(key); os.IsNotExist(err) {
+		return nil, err
+	}
 	bs, err := ioutil.ReadFile(key)
 	if err != nil {
 		return nil, err
