@@ -185,7 +185,7 @@ func NewLocalRunner() (*Local, error) {
 	return &Local{}, nil
 }
 
-func NewRemoteRunner(user, host, key string) (*Remote, error) {
+func NewRemoteKeyAuthRunner(user, host, key string) (*Remote, error) {
 	if _, err := os.Stat(key); os.IsNotExist(err) {
 		return nil, err
 	}
@@ -200,6 +200,18 @@ func NewRemoteRunner(user, host, key string) (*Remote, error) {
 	config := &ssh.ClientConfig{
 		User: user,
 		Auth: []ssh.AuthMethod{ssh.PublicKeys(signer)},
+	}
+	server, err := ssh.Dial("tcp", host, config)
+	if err != nil {
+		return nil, err
+	}
+	return &Remote{server}, nil
+}
+
+func NewRemotePassAuthRunner(user, host, password string) (*Remote, error) {
+	config := &ssh.ClientConfig{
+		User: user,
+		Auth: []ssh.AuthMethod{ssh.Password(password)},
 	}
 	server, err := ssh.Dial("tcp", host, config)
 	if err != nil {
