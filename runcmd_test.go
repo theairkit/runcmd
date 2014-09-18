@@ -18,7 +18,30 @@ var (
 	user          = "mike"
 	host          = "127.0.0.1:22"
 	key           = "/home/mike/.ssh/id_rsa"
+
+	// Add your password here:
+	pass = "somepass"
 )
+
+func TestKeyAuth(t *testing.T) {
+	rRunner, err := NewRemoteKeyAuthRunner(user, host, key)
+	if err != nil {
+		t.Error(err)
+	}
+	if err := testRun(rRunner); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestPassAuth(t *testing.T) {
+	rRunner, err := NewRemotePassAuthRunner(user, host, pass)
+	if err != nil {
+		t.Error(err)
+	}
+	if err := testRun(rRunner); err != nil {
+		t.Error(err)
+	}
+}
 
 func TestLocalRun(t *testing.T) {
 	lRunner, err := NewLocalRunner()
