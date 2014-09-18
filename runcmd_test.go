@@ -31,7 +31,7 @@ func TestLocalRun(t *testing.T) {
 }
 
 func TestRemoteRun(t *testing.T) {
-	rRunner, err := NewRemoteRunner(user, host, key)
+	rRunner, err := NewRemoteKeyAuthRunner(user, host, key)
 	if err != nil {
 		t.Error(err)
 	}
@@ -51,7 +51,7 @@ func TestLocalStartWait(t *testing.T) {
 }
 
 func TestRemoteStartWait(t *testing.T) {
-	rRunner, err := NewRemoteRunner(user, host, key)
+	rRunner, err := NewRemoteKeyAuthRunner(user, host, key)
 	if err != nil {
 		t.Error(err)
 	}
@@ -147,7 +147,7 @@ func testPipe(d bool) error {
 	if err != nil {
 		return err
 	}
-	rRunner, err := NewRemoteRunner(user, host, key)
+	rRunner, err := NewRemoteKeyAuthRunner(user, host, key)
 	if err != nil {
 		return err
 	}
