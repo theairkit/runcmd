@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"strings"
+
 	"testing"
 )
 
@@ -14,9 +15,9 @@ var (
 	cmdInvalid    = "blah-blah"
 	cmdInvalidKey = "uname -blah"
 	cmdPipeOut    = "date"
-	cmdPipeIn     = "cat - > /tmp/d"
+	cmdPipeIn     = "/usr/bin/tee /tmp/blah"
 	user          = "mike"
-	host          = "127.0.0.1:22"
+	host          = "192.168.44.68:22"
 	key           = "/home/mike/.ssh/id_rsa"
 
 	// Add your password here:
@@ -130,6 +131,8 @@ func testRun(runner Runner) error {
 		return nil
 	}
 	return errors.New(cmdInvalid + ": command exists, use another to pass test")
+
+	return nil
 }
 
 func testStartWait(runner Runner) error {
@@ -141,7 +144,9 @@ func testStartWait(runner Runner) error {
 	if err := cmd.Start(); err != nil {
 		return err
 	}
-	bOut, err := ioutil.ReadAll(cmd.Stdout())
+	b := cmd.StdoutPipe()
+
+	bOut, err := ioutil.ReadAll(b)
 	for _, s := range strings.Split(strings.Trim(string(bOut), "\n"), "\n") {
 		fmt.Println(s)
 	}
@@ -157,7 +162,8 @@ func testStartWait(runner Runner) error {
 	if err = cmd.Start(); err != nil {
 		return err
 	}
-	bOut, err = ioutil.ReadAll(cmd.Stdout())
+	b = cmd.StdoutPipe()
+	bOut, err = ioutil.ReadAll(b)
 	for _, s := range strings.Split(strings.Trim(string(bOut), "\n"), "\n") {
 		fmt.Println(s)
 	}
@@ -209,7 +215,7 @@ func testPipe(d bool) error {
 		if err = cmdRemote.Start(); err != nil {
 			return err
 		}
-		if _, err = io.Copy(cmdRemote.Stdin(), cmdLocal.Stdout()); err != nil {
+		if _, err = io.Copy(cmdRemote.StdinPipe(), cmdLocal.StdoutPipe()); err != nil {
 			return err
 		}
 		return cmdLocal.Wait()
@@ -229,7 +235,7 @@ func testPipe(d bool) error {
 	if err = cmdRemote.Start(); err != nil {
 		return err
 	}
-	if _, err = io.Copy(cmdLocal.Stdin(), cmdRemote.Stdout()); err != nil {
+	if _, err := io.Copy(cmdLocal.StdinPipe(), cmdRemote.StdoutPipe()); err != nil {
 		return err
 	}
 	return cmdRemote.Wait()

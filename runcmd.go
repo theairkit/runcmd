@@ -19,22 +19,22 @@ type CmdWorker interface {
 	Run() ([]string, error)
 	Start() error
 	Wait() error
-	Stdin() io.WriteCloser
-	Stdout() io.Reader
-	Stderr() io.Reader
+	StdinPipe() io.WriteCloser
+	StdoutPipe() io.Reader
+	StderrPipe() io.Reader
 }
 
 type LocalCmd struct {
-	StdinPipe  io.WriteCloser
-	StdoutPipe io.Reader
-	StderrPipe io.Reader
+	stdinPipe  io.WriteCloser
+	stdoutPipe io.Reader
+	stderrPipe io.Reader
 	cmd        *exec.Cmd
 }
 
 type RemoteCmd struct {
-	StdinPipe  io.WriteCloser
-	StdoutPipe io.Reader
-	StderrPipe io.Reader
+	stdinPipe  io.WriteCloser
+	stdoutPipe io.Reader
+	stderrPipe io.Reader
 	cmd        string
 	session    *ssh.Session
 }
@@ -61,7 +61,12 @@ func (this Local) Command(cmd string) (CmdWorker, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &LocalCmd{stdinPipe, stdoutPipe, stderrPipe, command}, nil
+	return &LocalCmd{
+		stdinPipe,
+		stdoutPipe,
+		stderrPipe,
+		command,
+	}, nil
 }
 
 func (this Remote) Command(cmd string) (CmdWorker, error) {
@@ -81,15 +86,21 @@ func (this Remote) Command(cmd string) (CmdWorker, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &RemoteCmd{stdinPipe, stdoutPipe, stderrPipe, cmd, session}, nil
+	return &RemoteCmd{
+		stdinPipe,
+		stdoutPipe,
+		stderrPipe,
+		cmd,
+		session,
+	}, nil
 }
 
 func (this *LocalCmd) Run() ([]string, error) {
-	err := this.Start()
-	if err != nil {
+	if err := this.Start(); err != nil {
 		return nil, err
 	}
-	bOut, err := ioutil.ReadAll(this.StdoutPipe)
+	cout := this.StdoutPipe()
+	bOut, err := ioutil.ReadAll(cout)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +118,8 @@ func (this *LocalCmd) Start() error {
 }
 
 func (this *LocalCmd) Wait() error {
-	bErr, err := ioutil.ReadAll(this.StderrPipe)
+	cerr := this.StdoutPipe()
+	bErr, err := ioutil.ReadAll(cerr)
 	if err != nil {
 		return err
 	}
@@ -120,23 +132,24 @@ func (this *LocalCmd) Wait() error {
 	return nil
 }
 
-func (this *LocalCmd) Stdin() io.WriteCloser {
-	return this.StdinPipe
+func (this *LocalCmd) StdinPipe() io.WriteCloser {
+	return this.stdinPipe
 }
 
-func (this *LocalCmd) Stdout() io.Reader {
-	return this.StdoutPipe
+func (this *LocalCmd) StdoutPipe() io.Reader {
+	return this.stdoutPipe
 }
 
-func (this *LocalCmd) Stderr() io.Reader {
-	return this.StderrPipe
+func (this *LocalCmd) StderrPipe() io.Reader {
+	return this.stderrPipe
 }
 
 func (this *RemoteCmd) Run() ([]string, error) {
 	if err := this.Start(); err != nil {
 		return nil, err
 	}
-	bOut, err := ioutil.ReadAll(this.StdoutPipe)
+	stdout := this.StdoutPipe()
+	bOut, err := ioutil.ReadAll(stdout)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +168,9 @@ func (this *RemoteCmd) Start() error {
 
 func (this *RemoteCmd) Wait() error {
 	defer this.session.Close()
-	bErr, err := ioutil.ReadAll(this.StderrPipe)
+	cerr := this.StdoutPipe()
+
+	bErr, err := ioutil.ReadAll(cerr)
 	if err != nil {
 		return err
 	}
@@ -168,16 +183,16 @@ func (this *RemoteCmd) Wait() error {
 	return nil
 }
 
-func (this *RemoteCmd) Stdin() io.WriteCloser {
-	return this.StdinPipe
+func (this *RemoteCmd) StdinPipe() io.WriteCloser {
+	return this.stdinPipe
 }
 
-func (this *RemoteCmd) Stdout() io.Reader {
-	return this.StdoutPipe
+func (this *RemoteCmd) StdoutPipe() io.Reader {
+	return this.stdoutPipe
 }
 
-func (this *RemoteCmd) Stderr() io.Reader {
-	return this.StderrPipe
+func (this *RemoteCmd) StderrPipe() io.Reader {
+	return this.stderrPipe
 }
 
 func NewLocalRunner() (*Local, error) {
