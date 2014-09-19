@@ -97,7 +97,10 @@ func TestPipeRemote2Local(t *testing.T) {
 
 func testRun(runner Runner) error {
 	// Valid command with valid keys:
-	cmd := runner.Command(cmdValid)
+	cmd, err := runner.Command(cmdValid)
+	if err != nil {
+		return err
+	}
 	out, err := cmd.Run()
 	if err != nil {
 		return err
@@ -107,7 +110,10 @@ func testRun(runner Runner) error {
 	}
 
 	// Valid command with invalid keys:
-	cmd = runner.Command(cmdInvalidKey)
+	cmd, err = runner.Command(cmdInvalidKey)
+	if err != nil {
+		return err
+	}
 	if _, err = cmd.Run(); err != nil {
 		fmt.Println(err.Error())
 	} else {
@@ -115,7 +121,10 @@ func testRun(runner Runner) error {
 	}
 
 	// Invalid command:
-	cmd = runner.Command(cmdInvalid)
+	cmd, err = runner.Command(cmdInvalid)
+	if err != nil {
+		return err
+	}
 	if _, err = cmd.Run(); err != nil {
 		fmt.Println(err.Error())
 		return nil
@@ -125,7 +134,10 @@ func testRun(runner Runner) error {
 
 func testStartWait(runner Runner) error {
 	// Valid command with valid keys:
-	cmd := runner.Command(cmdValid)
+	cmd, err := runner.Command(cmdValid)
+	if err != nil {
+		return err
+	}
 	if err := cmd.Start(); err != nil {
 		return err
 	}
@@ -138,7 +150,10 @@ func testStartWait(runner Runner) error {
 	}
 
 	// Valid command with invalid keys:
-	cmd = runner.Command(cmdInvalidKey)
+	cmd, err = runner.Command(cmdInvalidKey)
+	if err != nil {
+		return err
+	}
 	if err = cmd.Start(); err != nil {
 		return err
 	}
@@ -153,7 +168,10 @@ func testStartWait(runner Runner) error {
 	}
 
 	// Invalid command:
-	cmd = runner.Command(cmdInvalid)
+	cmd, err = runner.Command(cmdInvalid)
+	if err != nil {
+		return err
+	}
 	if err = cmd.Start(); err != nil {
 		fmt.Println(err.Error())
 		return nil
@@ -177,11 +195,17 @@ func testPipe(d bool) error {
 
 	// local2remote:
 	if d {
-		cmdLocal := lRunner.Command(cmdPipeOut)
+		cmdLocal, err := lRunner.Command(cmdPipeOut)
+		if err != nil {
+			return err
+		}
 		if err = cmdLocal.Start(); err != nil {
 			return err
 		}
-		cmdRemote := rRunner.Command(cmdPipeIn)
+		cmdRemote, err := rRunner.Command(cmdPipeIn)
+		if err != nil {
+			return err
+		}
 		if err = cmdRemote.Start(); err != nil {
 			return err
 		}
@@ -191,11 +215,17 @@ func testPipe(d bool) error {
 		return cmdLocal.Wait()
 	}
 	// remote2local:
-	cmdLocal := lRunner.Command(cmdPipeIn)
+	cmdLocal, err := lRunner.Command(cmdPipeIn)
+	if err != nil {
+		return err
+	}
 	if err = cmdLocal.Start(); err != nil {
 		return err
 	}
-	cmdRemote := rRunner.Command(cmdPipeOut)
+	cmdRemote, err := rRunner.Command(cmdPipeOut)
+	if err != nil {
+		return err
+	}
 	if err = cmdRemote.Start(); err != nil {
 		return err
 	}

@@ -12,7 +12,7 @@ import (
 )
 
 type Runner interface {
-	Command(cmd string) CmdWorker
+	Command(cmd string) (CmdWorker, error)
 }
 
 type CmdWorker interface {
@@ -46,17 +46,42 @@ type Remote struct {
 	serverConn *ssh.Client
 }
 
-func (this Local) Command(cmd string) CmdWorker {
+func (this Local) Command(cmd string) (CmdWorker, error) {
 	c := strings.Split(cmd, " ")
-	return &LocalCmd{nil, nil, nil, exec.Command(c[0], c[1:]...)}
+	command := exec.Command(c[0], c[1:]...)
+	stdinPipe, err := command.StdinPipe()
+	if err != nil {
+		return nil, err
+	}
+	stdoutPipe, err := command.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
+	stderrPipe, err := command.StderrPipe()
+	if err != nil {
+		return nil, err
+	}
+	return &LocalCmd{stdinPipe, stdoutPipe, stderrPipe, command}, nil
 }
 
-func (this Remote) Command(cmd string) CmdWorker {
+func (this Remote) Command(cmd string) (CmdWorker, error) {
 	session, err := this.serverConn.NewSession()
 	if err != nil {
-		return &RemoteCmd{}
+		return nil, err
 	}
-	return &RemoteCmd{nil, nil, nil, cmd, session}
+	stdinPipe, err := session.StdinPipe()
+	if err != nil {
+		return nil, err
+	}
+	stdoutPipe, err := session.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
+	stderrPipe, err := session.StderrPipe()
+	if err != nil {
+		return nil, err
+	}
+	return &RemoteCmd{stdinPipe, stdoutPipe, stderrPipe, cmd, session}, nil
 }
 
 func (this *LocalCmd) Run() ([]string, error) {
@@ -78,19 +103,6 @@ func (this *LocalCmd) Run() ([]string, error) {
 }
 
 func (this *LocalCmd) Start() error {
-	var err error
-	this.StdinPipe, err = this.cmd.StdinPipe()
-	if err != nil {
-		return err
-	}
-	this.StdoutPipe, err = this.cmd.StdoutPipe()
-	if err != nil {
-		return err
-	}
-	this.StderrPipe, err = this.cmd.StderrPipe()
-	if err != nil {
-		return err
-	}
 	return this.cmd.Start()
 }
 
@@ -138,19 +150,6 @@ func (this *RemoteCmd) Run() ([]string, error) {
 }
 
 func (this *RemoteCmd) Start() error {
-	var err error
-	this.StdinPipe, err = this.session.StdinPipe()
-	if err != nil {
-		return err
-	}
-	this.StdoutPipe, err = this.session.StdoutPipe()
-	if err != nil {
-		return err
-	}
-	this.StderrPipe, err = this.session.StderrPipe()
-	if err != nil {
-		return err
-	}
 	return this.session.Start(this.cmd)
 }
 
