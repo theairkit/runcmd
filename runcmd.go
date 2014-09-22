@@ -2,6 +2,7 @@ package runcmd
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -104,7 +105,15 @@ func (this *LocalCmd) Run() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	stderr := this.StderrPipe()
+	bErr, err := ioutil.ReadAll(stderr)
+	if err != nil {
+		return nil, err
+	}
 	if err := this.Wait(); err != nil {
+		if len(bErr) > 0 {
+			return nil, errors.New(err.Error() + string(bErr))
+		}
 		return nil, err
 	}
 	if len(bOut) > 0 {
@@ -145,6 +154,7 @@ func (this *LocalCmd) StderrPipe() io.Reader {
 }
 
 func (this *RemoteCmd) Run() ([]string, error) {
+	fmt.Println("remoterun starts")
 	if err := this.Start(); err != nil {
 		return nil, err
 	}
@@ -153,7 +163,15 @@ func (this *RemoteCmd) Run() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	stderr := this.StderrPipe()
+	bErr, err := ioutil.ReadAll(stderr)
+	if err != nil {
+		return nil, err
+	}
 	if err := this.Wait(); err != nil {
+		if len(bErr) > 0 {
+			return nil, errors.New(err.Error() + string(bErr))
+		}
 		return nil, err
 	}
 	if len(bOut) > 0 {
