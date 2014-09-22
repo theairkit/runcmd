@@ -2,7 +2,6 @@ package runcmd
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -112,7 +111,7 @@ func (this *LocalCmd) Run() ([]string, error) {
 	}
 	if err := this.Wait(); err != nil {
 		if len(bErr) > 0 {
-			return nil, errors.New(err.Error() + string(bErr))
+			return nil, errors.New(err.Error() + "\n" + string(bErr))
 		}
 		return nil, err
 	}
@@ -127,7 +126,7 @@ func (this *LocalCmd) Start() error {
 }
 
 func (this *LocalCmd) Wait() error {
-	cerr := this.StdoutPipe()
+	cerr := this.StderrPipe()
 	bErr, err := ioutil.ReadAll(cerr)
 	if err != nil {
 		return err
@@ -154,7 +153,6 @@ func (this *LocalCmd) StderrPipe() io.Reader {
 }
 
 func (this *RemoteCmd) Run() ([]string, error) {
-	fmt.Println("remoterun starts")
 	if err := this.Start(); err != nil {
 		return nil, err
 	}
@@ -170,7 +168,7 @@ func (this *RemoteCmd) Run() ([]string, error) {
 	}
 	if err := this.Wait(); err != nil {
 		if len(bErr) > 0 {
-			return nil, errors.New(err.Error() + string(bErr))
+			return nil, errors.New(err.Error() + "\n" + string(bErr))
 		}
 		return nil, err
 	}
@@ -186,8 +184,7 @@ func (this *RemoteCmd) Start() error {
 
 func (this *RemoteCmd) Wait() error {
 	defer this.session.Close()
-	cerr := this.StdoutPipe()
-
+	cerr := this.StderrPipe()
 	bErr, err := ioutil.ReadAll(cerr)
 	if err != nil {
 		return err
