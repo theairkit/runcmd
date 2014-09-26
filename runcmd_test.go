@@ -20,7 +20,7 @@ var (
 	host          = "192.168.44.68:22"
 	key           = "/home/mike/.ssh/id_rsa"
 
-	// Add your password here:
+	// Before run test, add ssh password here:
 	pass = "somepass"
 )
 

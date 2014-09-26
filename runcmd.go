@@ -96,11 +96,12 @@ func (this Remote) Command(cmd string) (CmdWorker, error) {
 }
 
 func (this *LocalCmd) Run() ([]string, error) {
+	out := make([]string, 0)
 	if err := this.Start(); err != nil {
 		return nil, err
 	}
-	cout := this.StdoutPipe()
-	bOut, err := ioutil.ReadAll(cout)
+	stdout := this.StdoutPipe()
+	bOut, err := ioutil.ReadAll(stdout)
 	if err != nil {
 		return nil, err
 	}
@@ -116,9 +117,15 @@ func (this *LocalCmd) Run() ([]string, error) {
 		return nil, err
 	}
 	if len(bOut) > 0 {
-		return strings.Split(strings.Trim(string(bOut), "\n"), "\n"), nil
+		out = append(out, strings.Split(strings.Trim(string(bOut), "\n"), "\n")...)
 	}
-	return nil, nil
+	// command exit with zero code,
+	// but if there are some data in stderr,
+	// we concatenate it with stdout:
+	if len(bErr) > 0 {
+		out = append(out, strings.Split(strings.Trim(string(bErr), "\n"), "\n")...)
+	}
+	return out, nil
 }
 
 func (this *LocalCmd) Start() error {
@@ -153,6 +160,7 @@ func (this *LocalCmd) StderrPipe() io.Reader {
 }
 
 func (this *RemoteCmd) Run() ([]string, error) {
+	out := make([]string, 0)
 	if err := this.Start(); err != nil {
 		return nil, err
 	}
@@ -173,9 +181,15 @@ func (this *RemoteCmd) Run() ([]string, error) {
 		return nil, err
 	}
 	if len(bOut) > 0 {
-		return strings.Split(strings.Trim(string(bOut), "\n"), "\n"), nil
+		out = append(out, strings.Split(strings.Trim(string(bOut), "\n"), "\n")...)
 	}
-	return nil, nil
+	// command exit with zero code,
+	// but if there are some data in stderr,
+	// we concatenate it with stdout:
+	if len(bErr) > 0 {
+		out = append(out, strings.Split(strings.Trim(string(bErr), "\n"), "\n")...)
+	}
+	return out, nil
 }
 
 func (this *RemoteCmd) Start() error {
