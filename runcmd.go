@@ -47,7 +47,7 @@ type Remote struct {
 }
 
 func (this Local) Command(cmd string) (CmdWorker, error) {
-	c := strings.Split(cmd, " ")
+	c := strings.Fields(cmd)
 	command := exec.Command(c[0], c[1:]...)
 	stdinPipe, err := command.StdinPipe()
 	if err != nil {
@@ -119,9 +119,6 @@ func (this *LocalCmd) Run() ([]string, error) {
 	if len(bOut) > 0 {
 		out = append(out, strings.Split(strings.Trim(string(bOut), "\n"), "\n")...)
 	}
-	// command exit with zero code,
-	// but if there are some data in stderr,
-	// we concatenate it with stdout:
 	if len(bErr) > 0 {
 		out = append(out, strings.Split(strings.Trim(string(bErr), "\n"), "\n")...)
 	}
@@ -183,9 +180,6 @@ func (this *RemoteCmd) Run() ([]string, error) {
 	if len(bOut) > 0 {
 		out = append(out, strings.Split(strings.Trim(string(bOut), "\n"), "\n")...)
 	}
-	// command exit with zero code,
-	// but if there are some data in stderr,
-	// we concatenate it with stdout:
 	if len(bErr) > 0 {
 		out = append(out, strings.Split(strings.Trim(string(bErr), "\n"), "\n")...)
 	}
