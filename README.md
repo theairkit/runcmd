@@ -29,7 +29,7 @@ if err != nil {
 
 rRunner, err := runcmd.NewRemotePassAuthRunner("user","127.0.0.1:22","userpass")
 if err != nil {
-	log.Fatal(err.Error())
+	//handle error
 }
 ```
 
@@ -45,8 +45,8 @@ if err != nil {
 }
 ```
 
-Also, both local and remote runners implements Runner interface,
-so, you can pass them as Runner:
+Both local and remote runners implements Runner interface,
+so, you can work with them as Runner:
 
 ```go
 func listSomeDir(r Runner) error {
@@ -56,7 +56,7 @@ func listSomeDir(r Runner) error {
 	}
 	out, err := c.Run()
 	if err != nil {
-		return err
+		//handle error
 	}
 	for _, i := range out {
 		fmt.Println(i)
@@ -79,30 +79,30 @@ Another useful code snippet: pipe from local to remote command:
 ```
 lRunner, err := NewLocalRunner()
 if err != nil {
-	return err
+	//handle error
 }
 
 rRunner, err := NewRemoteKeyAuthRunner(user, host, key)
 if err != nil {
-	return err
+	//handle error
 }
 
 cmdLocal, err := lRunner.Command("date")
 if err != nil {
-	return err
+	//handle error
 }
 if err = cmdLocal.Start(); err != nil {
-	return err
+	//handle error
 }
 cmdRemote, err := rRunner.Command("tee /tmp/tmpfile")
 if err != nil {
-	return err
+	//handle error
 }
 if err = cmdRemote.Start(); err != nil {
-	return err
+	//handle error
 }
 if _, err = io.Copy(cmdRemote.StdinPipe(), cmdLocal.StdoutPipe()); err != nil {
-	return err
+	//handle error
 }
 
 // Correct handle end of copying:
