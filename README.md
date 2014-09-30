@@ -21,16 +21,12 @@ lRunner, err := runcmd.NewLocalRunner()
 if err != nil {
 	//handle error
 }
-/*
-...
-*/
+
 rRunner, err := runcmd.NewRemoteKeyAuthRunner("user","127.0.0.1:22","/home/user/id_rsa")
 if err != nil {
 	//handle error
 }
-/*
-...
-*/
+
 rRunner, err := runcmd.NewRemotePassAuthRunner("user","127.0.0.1:22","userpass")
 if err != nil {
 	log.Fatal(err.Error())
@@ -109,8 +105,7 @@ if _, err = io.Copy(cmdRemote.StdinPipe(), cmdLocal.StdoutPipe()); err != nil {
 	return err
 }
 
-// Becasue of using buffered pipe in io.Copy,
-// you need correct handle finish copying:
+// Correct handle end of copying:
 cmdLocal.Wait()
 cmdRemote.StdinPipe().Close()
 cmdRemote.Wait()
