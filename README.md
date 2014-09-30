@@ -19,14 +19,14 @@ First, create runner: this is a type, that holds:
 ```go
 lRunner, err := runcmd.NewLocalRunner()
 if err != nil {
-	log.Fatal(err.Error())
+	//handle error
 }
 /*
 ...
 */
 rRunner, err := runcmd.NewRemoteKeyAuthRunner("user","127.0.0.1:22","/home/user/id_rsa")
 if err != nil {
-	log.Fatal(err.Error())
+	//handle error
 }
 /*
 ...
@@ -41,7 +41,7 @@ After that, create command, and run methods:
 ```
 c, err := rRunner.Command("date")
 if err != nil {
-	return err
+	//handle error
 }
 out, err := c.Run()
 if err != nil {
@@ -56,7 +56,7 @@ so, you can pass them as Runner
 func listSomeDir(r Runner) error {
 	c, err := r.Command("ls -la")
 	if err != nil {
-		return err
+		//handle error
 	}
 	out, err := c.Run()
 	if err != nil {
