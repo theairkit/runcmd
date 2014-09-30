@@ -22,12 +22,20 @@ if err != nil {
 	//handle error
 }
 
-rRunner, err := runcmd.NewRemoteKeyAuthRunner("user","127.0.0.1:22","/home/user/id_rsa")
+rRunner, err := runcmd.NewRemoteKeyAuthRunner(
+			"user",
+			"127.0.0.1:22",
+			"/home/user/id_rsa",
+			)
 if err != nil {
 	//handle error
 }
 
-rRunner, err := runcmd.NewRemotePassAuthRunner("user","127.0.0.1:22","userpass")
+rRunner, err := runcmd.NewRemotePassAuthRunner(
+			"user",
+			"127.0.0.1:22",
+			"userpass",
+			)
 if err != nil {
 	//handle error
 }
@@ -87,21 +95,21 @@ if err != nil {
 	//handle error
 }
 
-cmdLocal, err := lRunner.Command("date")
+cLocal, err := lRunner.Command("date")
 if err != nil {
 	//handle error
 }
 if err = cmdLocal.Start(); err != nil {
 	//handle error
 }
-cmdRemote, err := rRunner.Command("tee /tmp/tmpfile")
+cRemote, err := rRunner.Command("tee /tmp/tmpfile")
 if err != nil {
 	//handle error
 }
-if err = cmdRemote.Start(); err != nil {
+if err = cRemote.Start(); err != nil {
 	//handle error
 }
-if _, err = io.Copy(cmdRemote.StdinPipe(), cmdLocal.StdoutPipe()); err != nil {
+if _, err = io.Copy(cRemote.StdinPipe(),cLocal.StdoutPipe(),); err != nil {
 	//handle error
 }
 
