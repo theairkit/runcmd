@@ -46,18 +46,17 @@ type Remote struct {
 	serverConn *ssh.Client
 }
 
-func (this Local) Command(cmd string) (CmdWorker, error) {
-	c := strings.Fields(cmd)
-	command := exec.Command(c[0], c[1:]...)
-	stdinPipe, err := command.StdinPipe()
+func (this *Local) Command(cmd string) (CmdWorker, error) {
+	c := exec.Command(strings.Fields(cmd)[0], strings.Fields(cmd)[1:]...)
+	stdinPipe, err := c.StdinPipe()
 	if err != nil {
 		return nil, err
 	}
-	stdoutPipe, err := command.StdoutPipe()
+	stdoutPipe, err := c.StdoutPipe()
 	if err != nil {
 		return nil, err
 	}
-	stderrPipe, err := command.StderrPipe()
+	stderrPipe, err := c.StderrPipe()
 	if err != nil {
 		return nil, err
 	}
@@ -65,24 +64,24 @@ func (this Local) Command(cmd string) (CmdWorker, error) {
 		stdinPipe,
 		stdoutPipe,
 		stderrPipe,
-		command,
+		c,
 	}, nil
 }
 
-func (this Remote) Command(cmd string) (CmdWorker, error) {
-	session, err := this.serverConn.NewSession()
+func (this *Remote) Command(cmd string) (CmdWorker, error) {
+	s, err := this.serverConn.NewSession()
 	if err != nil {
 		return nil, err
 	}
-	stdinPipe, err := session.StdinPipe()
+	stdinPipe, err := s.StdinPipe()
 	if err != nil {
 		return nil, err
 	}
-	stdoutPipe, err := session.StdoutPipe()
+	stdoutPipe, err := s.StdoutPipe()
 	if err != nil {
 		return nil, err
 	}
-	stderrPipe, err := session.StderrPipe()
+	stderrPipe, err := s.StderrPipe()
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +90,7 @@ func (this Remote) Command(cmd string) (CmdWorker, error) {
 		stdoutPipe,
 		stderrPipe,
 		cmd,
-		session,
+		s,
 	}, nil
 }
 
