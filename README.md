@@ -46,7 +46,7 @@ if err != nil {
 ```
 
 Also, both local and remote runners implements Runner interface,
-so, you can pass them as Runner
+so, you can pass them as Runner:
 
 ```go
 func listSomeDir(r Runner) error {
