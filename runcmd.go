@@ -190,10 +190,15 @@ func (this *RemoteCmd) Start() error {
 }
 
 func (this *RemoteCmd) Wait() error {
-	defer this.session.Close()
 	cerr := this.StderrPipe()
 	bErr, err := ioutil.ReadAll(cerr)
 	if err != nil {
+		return err
+	}
+	if err := this.session.Close(); err != nil {
+		if len(bErr) > 0 {
+			return errors.New(err.Error() + "\n" + string(bErr))
+		}
 		return err
 	}
 	if err := this.session.Wait(); err != nil {
