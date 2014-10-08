@@ -134,6 +134,15 @@ func (this *LocalCmd) Wait() error {
 	if err != nil {
 		return err
 	}
+	// In this case EOF is not error: http://golang.org/pkg/io/
+	// EOF is the error returned by Read when no more input is available.
+	// Functions should return EOF only to signal a graceful end of input.
+	if err := this.stdinPipe.Close(); err != nil && err != io.EOF {
+		if len(bErr) > 0 {
+			return errors.New(err.Error() + "\n" + string(bErr))
+		}
+		return err
+	}
 	if err := this.cmd.Wait(); err != nil {
 		if len(bErr) > 0 {
 			return errors.New(err.Error() + "\n" + string(bErr))
@@ -190,12 +199,17 @@ func (this *RemoteCmd) Start() error {
 }
 
 func (this *RemoteCmd) Wait() error {
+	defer this.session.Close()
 	cerr := this.StderrPipe()
 	bErr, err := ioutil.ReadAll(cerr)
 	if err != nil {
 		return err
 	}
-	if err := this.session.Close(); err != nil {
+
+	// In this case EOF is not error: http://golang.org/pkg/io/
+	// EOF is the error returned by Read when no more input is available.
+	// Functions should return EOF only to signal a graceful end of input.
+	if err := this.stdinPipe.Close(); err != nil && err != io.EOF {
 		if len(bErr) > 0 {
 			return errors.New(err.Error() + "\n" + string(bErr))
 		}

@@ -21,7 +21,7 @@ var (
 	key           = "/home/mike/.ssh/id_rsa"
 
 	// Before run test, add ssh password here:
-	pass = "somepass"
+	pass = "ytn0lvby1"
 )
 
 func TestKeyAuth(t *testing.T) {
