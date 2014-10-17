@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"strings"
 
 	"testing"
@@ -21,7 +22,7 @@ var (
 	key           = "/home/mike/.ssh/id_rsa"
 
 	// Before run test, add ssh password here:
-	pass = "ytn0lvby1"
+	pass = "somepass"
 )
 
 func TestKeyAuth(t *testing.T) {
@@ -35,6 +36,11 @@ func TestKeyAuth(t *testing.T) {
 }
 
 func TestPassAuth(t *testing.T) {
+	defer func() {
+		if er := recover(); er != nil {
+			os.Exit(1)
+		}
+	}()
 	rRunner, err := NewRemotePassAuthRunner(user, host, pass)
 	if err != nil {
 		t.Error(err)
