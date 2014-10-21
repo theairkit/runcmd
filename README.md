@@ -17,6 +17,7 @@ First, create runner: this is a type, that holds:
   so, you can create only one remote runner to remote host
 
 Note: there are no ability to set connection timeout in golang-ssh package
+
 (track my request: https://codereview.appspot.com/158760043/)
 
 ```go
