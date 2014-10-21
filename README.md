@@ -9,12 +9,15 @@ Installation:
 go get github.com/theairkit/runcmd
 ```
 
-### Description and examples
+### Description and examples:
 
 First, create runner: this is a type, that holds:
 - for local commands: empty struct
 - for remote commands: connect to remote host;
   so, you can create only one remote runner to remote host
+
+Note: there are no ability to set connection timeout in golang-ssh package
+(track my request: https://codereview.appspot.com/158760043/)
 
 ```go
 lRunner, err := runcmd.NewLocalRunner()
@@ -120,3 +123,11 @@ cmdRemote.Wait()
 ```
 
 For other examples see runcmd_test.go
+Before running 'go test', change next variables in runcmd_test.go:
+```go
+	//Change it before running the tests:
+	user = "user"
+	host = "127.0.0.1:22"
+	key  = "/home/user/.ssh/id_rsa"
+	pass = "somepass"
+```

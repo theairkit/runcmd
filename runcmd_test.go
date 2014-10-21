@@ -17,11 +17,11 @@ var (
 	cmdInvalidKey = "uname -blah"
 	cmdPipeOut    = "date"
 	cmdPipeIn     = "/usr/bin/tee /tmp/blah"
-	user          = "mike"
-	host          = "192.168.44.68:22"
-	key           = "/home/mike/.ssh/id_rsa"
 
-	// Before run test, add ssh password here:
+	// Change it before running the tests:
+	user = "user"
+	host = "127.0.0.1:22"
+	key  = "/home/user/.ssh/id_rsa"
 	pass = "somepass"
 )
 
