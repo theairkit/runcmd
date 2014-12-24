@@ -165,6 +165,7 @@ func (this *LocalCmd) StderrPipe() io.Reader {
 }
 
 func (this *RemoteCmd) Run() ([]string, error) {
+	defer this.session.Close()
 	out := make([]string, 0)
 	if err := this.Start(); err != nil {
 		return nil, err
