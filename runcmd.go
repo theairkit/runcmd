@@ -275,3 +275,7 @@ func NewRemotePassAuthRunner(user, host, password string) (*Remote, error) {
 	}
 	return &Remote{server}, nil
 }
+
+func (this *Remote) CloseConnection() error {
+	return this.serverConn.Close()
+}
