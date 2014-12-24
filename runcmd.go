@@ -165,6 +165,7 @@ func (this *LocalCmd) StderrPipe() io.Reader {
 }
 
 func (this *RemoteCmd) Run() ([]string, error) {
+	defer this.session.Close()
 	out := make([]string, 0)
 	if err := this.Start(); err != nil {
 		return nil, err
@@ -273,4 +274,8 @@ func NewRemotePassAuthRunner(user, host, password string) (*Remote, error) {
 		return nil, err
 	}
 	return &Remote{server}, nil
+}
+
+func (this *Remote) CloseConnection() error {
+	return this.serverConn.Close()
 }
