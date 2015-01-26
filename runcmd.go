@@ -47,6 +47,9 @@ type Remote struct {
 }
 
 func (this *Local) Command(cmd string) (CmdWorker, error) {
+	if cmd == "" {
+		return nil, errors.New("command cannot be empty")
+	}
 	c := exec.Command(strings.Fields(cmd)[0], strings.Fields(cmd)[1:]...)
 	stdinPipe, err := c.StdinPipe()
 	if err != nil {
@@ -69,6 +72,9 @@ func (this *Local) Command(cmd string) (CmdWorker, error) {
 }
 
 func (this *Remote) Command(cmd string) (CmdWorker, error) {
+	if cmd == "" {
+		return nil, errors.New("command cannot be empty")
+	}
 	s, err := this.serverConn.NewSession()
 	if err != nil {
 		return nil, err
