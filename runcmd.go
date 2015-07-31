@@ -2,6 +2,7 @@ package runcmd
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -10,6 +11,32 @@ import (
 
 	"code.google.com/p/go.crypto/ssh"
 )
+
+type ExecError struct {
+	ExecutionError  error
+	StderrReadError error
+
+	Stderr []byte
+}
+
+func newExecError(execErr, readErr error, stderr []byte) ExecError {
+	return ExecError{execErr, readErr, stderr}
+}
+
+func (err ExecError) Error() string {
+	errString := err.ExecutionError.Error()
+	if err.StderrReadError != nil {
+		errString += fmt.Sprintf(
+			"\nerror while reading stderr: %s", err.StderrReadError.Error(),
+		)
+	}
+	if len(err.Stderr) != 0 {
+		errString += fmt.Sprintf(
+			"\n%s", string(err.Stderr),
+		)
+	}
+	return errString
+}
 
 type Runner interface {
 	Command(cmd string) (CmdWorker, error)
@@ -136,24 +163,16 @@ func (this *LocalCmd) Start() error {
 
 func (this *LocalCmd) Wait() error {
 	cerr := this.StderrPipe()
-	bErr, err := ioutil.ReadAll(cerr)
-	if err != nil {
-		return err
-	}
+	bErr, readErr := ioutil.ReadAll(cerr)
+
 	// In this case EOF is not error: http://golang.org/pkg/io/
 	// EOF is the error returned by Read when no more input is available.
 	// Functions should return EOF only to signal a graceful end of input.
 	if err := this.stdinPipe.Close(); err != nil && err != io.EOF {
-		if len(bErr) > 0 {
-			return errors.New(err.Error() + "\n" + string(bErr))
-		}
-		return err
+		return newExecError(err, readErr, bErr)
 	}
 	if err := this.cmd.Wait(); err != nil {
-		if len(bErr) > 0 {
-			return errors.New(err.Error() + "\n" + string(bErr))
-		}
-		return err
+		return newExecError(err, readErr, bErr)
 	}
 	return nil
 }
@@ -208,25 +227,16 @@ func (this *RemoteCmd) Start() error {
 func (this *RemoteCmd) Wait() error {
 	defer this.session.Close()
 	cerr := this.StderrPipe()
-	bErr, err := ioutil.ReadAll(cerr)
-	if err != nil {
-		return err
-	}
+	bErr, readErr := ioutil.ReadAll(cerr)
 
 	// In this case EOF is not error: http://golang.org/pkg/io/
 	// EOF is the error returned by Read when no more input is available.
 	// Functions should return EOF only to signal a graceful end of input.
 	if err := this.stdinPipe.Close(); err != nil && err != io.EOF {
-		if len(bErr) > 0 {
-			return errors.New(err.Error() + "\n" + string(bErr))
-		}
-		return err
+		return newExecError(err, readErr, bErr)
 	}
 	if err := this.session.Wait(); err != nil {
-		if len(bErr) > 0 {
-			return errors.New(err.Error() + "\n" + string(bErr))
-		}
-		return err
+		return newExecError(err, readErr, bErr)
 	}
 	return nil
 }
