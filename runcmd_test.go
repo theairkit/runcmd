@@ -136,9 +136,8 @@ func testRun(runner Runner) error {
 		fmt.Println(err.Error())
 		return nil
 	}
-	return errors.New(cmdInvalid + ": command exists, use another to pass test")
 
-	return nil
+	return errors.New(cmdInvalid + ": command exists, use another to pass test")
 }
 
 func testStartWait(runner Runner) error {

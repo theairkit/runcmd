@@ -3,7 +3,6 @@ package runcmd
 import (
 	"errors"
 	"io"
-	"io/ioutil"
 	"os/exec"
 	"strings"
 )
@@ -47,33 +46,11 @@ func (runner *Local) Command(cmd string) (CmdWorker, error) {
 }
 
 func (cmd *LocalCmd) Run() ([]string, error) {
-	var out []string
 	if err := cmd.Start(); err != nil {
 		return nil, err
 	}
-	stdout := cmd.StdoutPipe()
-	bOut, err := ioutil.ReadAll(stdout)
-	if err != nil {
-		return nil, err
-	}
-	stderr := cmd.StderrPipe()
-	bErr, err := ioutil.ReadAll(stderr)
-	if err != nil {
-		return nil, err
-	}
-	if err := cmd.Wait(); err != nil {
-		if len(bErr) > 0 {
-			return nil, errors.New(err.Error() + "\n" + string(bErr))
-		}
-		return nil, err
-	}
-	if len(bOut) > 0 {
-		out = append(out, strings.Split(strings.Trim(string(bOut), "\n"), "\n")...)
-	}
-	if len(bErr) > 0 {
-		out = append(out, strings.Split(strings.Trim(string(bErr), "\n"), "\n")...)
-	}
-	return out, nil
+
+	return run(cmd)
 }
 
 func (cmd *LocalCmd) Start() error {
@@ -81,19 +58,11 @@ func (cmd *LocalCmd) Start() error {
 }
 
 func (cmd *LocalCmd) Wait() error {
-	cerr := cmd.StderrPipe()
-	bErr, readErr := ioutil.ReadAll(cerr)
-
-	// In this case EOF is not error: http://golang.org/pkg/io/
-	// EOF is the error returned by Read when no more input is available.
-	// Functions should return EOF only to signal a graceful end of input.
 	if err := cmd.stdinPipe.Close(); err != nil && err != io.EOF {
-		return newExecError(err, readErr, bErr)
+		return err
 	}
-	if err := cmd.cmd.Wait(); err != nil {
-		return newExecError(err, readErr, bErr)
-	}
-	return nil
+
+	return cmd.cmd.Wait()
 }
 
 func (cmd *LocalCmd) StdinPipe() io.WriteCloser {
@@ -102,6 +71,14 @@ func (cmd *LocalCmd) StdinPipe() io.WriteCloser {
 
 func (cmd *LocalCmd) StdoutPipe() io.Reader {
 	return cmd.stdoutPipe
+}
+
+func (cmd *LocalCmd) SetStdout(buffer io.Writer) {
+	cmd.cmd.Stdout = buffer
+}
+
+func (cmd *LocalCmd) SetStderr(buffer io.Writer) {
+	cmd.cmd.Stderr = buffer
 }
 
 func (cmd *LocalCmd) StderrPipe() io.Reader {
