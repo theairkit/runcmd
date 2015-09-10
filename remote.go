@@ -92,7 +92,7 @@ func (runner *Remote) CloseConnection() error {
 
 func (cmd *RemoteCmd) Run() ([]string, error) {
 	defer cmd.session.Close()
-	out := make([]string, 0)
+	var out []string
 	if err := cmd.Start(); err != nil {
 		return nil, err
 	}

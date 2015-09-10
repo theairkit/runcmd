@@ -47,7 +47,7 @@ func (runner *Local) Command(cmd string) (CmdWorker, error) {
 }
 
 func (cmd *LocalCmd) Run() ([]string, error) {
-	out := make([]string, 0)
+	var out []string
 	if err := cmd.Start(); err != nil {
 		return nil, err
 	}
