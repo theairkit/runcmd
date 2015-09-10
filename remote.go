@@ -57,11 +57,11 @@ func NewRemotePassAuthRunner(user, host, password string) (*Remote, error) {
 	return &Remote{server}, nil
 }
 
-func (this *Remote) Command(cmd string) (CmdWorker, error) {
+func (runner *Remote) Command(cmd string) (CmdWorker, error) {
 	if cmd == "" {
 		return nil, errors.New("command cannot be empty")
 	}
-	s, err := this.serverConn.NewSession()
+	s, err := runner.serverConn.NewSession()
 	if err != nil {
 		return nil, err
 	}
@@ -86,23 +86,27 @@ func (this *Remote) Command(cmd string) (CmdWorker, error) {
 	}, nil
 }
 
-func (this *RemoteCmd) Run() ([]string, error) {
-	defer this.session.Close()
+func (runner *Remote) CloseConnection() error {
+	return runner.serverConn.Close()
+}
+
+func (cmd *RemoteCmd) Run() ([]string, error) {
+	defer cmd.session.Close()
 	out := make([]string, 0)
-	if err := this.Start(); err != nil {
+	if err := cmd.Start(); err != nil {
 		return nil, err
 	}
-	stdout := this.StdoutPipe()
+	stdout := cmd.StdoutPipe()
 	bOut, err := ioutil.ReadAll(stdout)
 	if err != nil {
 		return nil, err
 	}
-	stderr := this.StderrPipe()
+	stderr := cmd.StderrPipe()
 	bErr, err := ioutil.ReadAll(stderr)
 	if err != nil {
 		return nil, err
 	}
-	if err := this.Wait(); err != nil {
+	if err := cmd.Wait(); err != nil {
 		if len(bErr) > 0 {
 			return nil, errors.New(err.Error() + "\n" + string(bErr))
 		}
@@ -117,39 +121,35 @@ func (this *RemoteCmd) Run() ([]string, error) {
 	return out, nil
 }
 
-func (this *RemoteCmd) Start() error {
-	return this.session.Start(this.cmd)
+func (cmd *RemoteCmd) Start() error {
+	return cmd.session.Start(cmd.cmd)
 }
 
-func (this *RemoteCmd) Wait() error {
-	defer this.session.Close()
-	cerr := this.StderrPipe()
+func (cmd *RemoteCmd) Wait() error {
+	defer cmd.session.Close()
+	cerr := cmd.StderrPipe()
 	bErr, readErr := ioutil.ReadAll(cerr)
 
-	// In this case EOF is not error: http://golang.org/pkg/io/
+	// In cmd case EOF is not error: http://golang.org/pkg/io/
 	// EOF is the error returned by Read when no more input is available.
 	// Functions should return EOF only to signal a graceful end of input.
-	if err := this.stdinPipe.Close(); err != nil && err != io.EOF {
+	if err := cmd.stdinPipe.Close(); err != nil && err != io.EOF {
 		return newExecError(err, readErr, bErr)
 	}
-	if err := this.session.Wait(); err != nil {
+	if err := cmd.session.Wait(); err != nil {
 		return newExecError(err, readErr, bErr)
 	}
 	return nil
 }
 
-func (this *RemoteCmd) StdinPipe() io.WriteCloser {
-	return this.stdinPipe
+func (cmd *RemoteCmd) StdinPipe() io.WriteCloser {
+	return cmd.stdinPipe
 }
 
-func (this *RemoteCmd) StdoutPipe() io.Reader {
-	return this.stdoutPipe
+func (cmd *RemoteCmd) StdoutPipe() io.Reader {
+	return cmd.stdoutPipe
 }
 
-func (this *RemoteCmd) StderrPipe() io.Reader {
-	return this.stderrPipe
-}
-
-func (this *Remote) CloseConnection() error {
-	return this.serverConn.Close()
+func (cmd *RemoteCmd) StderrPipe() io.Reader {
+	return cmd.stderrPipe
 }

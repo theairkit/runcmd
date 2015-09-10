@@ -15,14 +15,13 @@ type LocalCmd struct {
 	cmd        *exec.Cmd
 }
 
-type Local struct {
-}
+type Local struct{}
 
 func NewLocalRunner() (*Local, error) {
 	return &Local{}, nil
 }
 
-func (this *Local) Command(cmd string) (CmdWorker, error) {
+func (runner *Local) Command(cmd string) (CmdWorker, error) {
 	if cmd == "" {
 		return nil, errors.New("command cannot be empty")
 	}
@@ -47,22 +46,22 @@ func (this *Local) Command(cmd string) (CmdWorker, error) {
 	}, nil
 }
 
-func (this *LocalCmd) Run() ([]string, error) {
+func (cmd *LocalCmd) Run() ([]string, error) {
 	out := make([]string, 0)
-	if err := this.Start(); err != nil {
+	if err := cmd.Start(); err != nil {
 		return nil, err
 	}
-	stdout := this.StdoutPipe()
+	stdout := cmd.StdoutPipe()
 	bOut, err := ioutil.ReadAll(stdout)
 	if err != nil {
 		return nil, err
 	}
-	stderr := this.StderrPipe()
+	stderr := cmd.StderrPipe()
 	bErr, err := ioutil.ReadAll(stderr)
 	if err != nil {
 		return nil, err
 	}
-	if err := this.Wait(); err != nil {
+	if err := cmd.Wait(); err != nil {
 		if len(bErr) > 0 {
 			return nil, errors.New(err.Error() + "\n" + string(bErr))
 		}
@@ -77,34 +76,34 @@ func (this *LocalCmd) Run() ([]string, error) {
 	return out, nil
 }
 
-func (this *LocalCmd) Start() error {
-	return this.cmd.Start()
+func (cmd *LocalCmd) Start() error {
+	return cmd.cmd.Start()
 }
 
-func (this *LocalCmd) Wait() error {
-	cerr := this.StderrPipe()
+func (cmd *LocalCmd) Wait() error {
+	cerr := cmd.StderrPipe()
 	bErr, readErr := ioutil.ReadAll(cerr)
 
 	// In this case EOF is not error: http://golang.org/pkg/io/
 	// EOF is the error returned by Read when no more input is available.
 	// Functions should return EOF only to signal a graceful end of input.
-	if err := this.stdinPipe.Close(); err != nil && err != io.EOF {
+	if err := cmd.stdinPipe.Close(); err != nil && err != io.EOF {
 		return newExecError(err, readErr, bErr)
 	}
-	if err := this.cmd.Wait(); err != nil {
+	if err := cmd.cmd.Wait(); err != nil {
 		return newExecError(err, readErr, bErr)
 	}
 	return nil
 }
 
-func (this *LocalCmd) StdinPipe() io.WriteCloser {
-	return this.stdinPipe
+func (cmd *LocalCmd) StdinPipe() io.WriteCloser {
+	return cmd.stdinPipe
 }
 
-func (this *LocalCmd) StdoutPipe() io.Reader {
-	return this.stdoutPipe
+func (cmd *LocalCmd) StdoutPipe() io.Reader {
+	return cmd.stdoutPipe
 }
 
-func (this *LocalCmd) StderrPipe() io.Reader {
-	return this.stderrPipe
+func (cmd *LocalCmd) StderrPipe() io.Reader {
+	return cmd.stderrPipe
 }
