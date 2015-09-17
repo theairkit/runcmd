@@ -146,10 +146,13 @@ func testStartWait(runner Runner) error {
 	if err != nil {
 		return err
 	}
+	b, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
 	if err := cmd.Start(); err != nil {
 		return err
 	}
-	b := cmd.StdoutPipe()
 
 	bOut, err := ioutil.ReadAll(b)
 	for _, s := range strings.Split(strings.Trim(string(bOut), "\n"), "\n") {
@@ -164,10 +167,13 @@ func testStartWait(runner Runner) error {
 	if err != nil {
 		return err
 	}
+	b, err = cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
 	if err = cmd.Start(); err != nil {
 		return err
 	}
-	b = cmd.StdoutPipe()
 	bOut, err = ioutil.ReadAll(b)
 	for _, s := range strings.Split(strings.Trim(string(bOut), "\n"), "\n") {
 		fmt.Println(s)
@@ -194,7 +200,7 @@ func testStartWait(runner Runner) error {
 	return errors.New(cmdInvalid + ": command exists, use another to pass test")
 }
 
-func testPipe(d bool) error {
+func testPipe(localToRemote bool) error {
 	lRunner, err := NewLocalRunner()
 	if err != nil {
 		return err
@@ -204,9 +210,12 @@ func testPipe(d bool) error {
 		return err
 	}
 
-	// local2remote:
-	if d {
+	if localToRemote {
 		cmdLocal, err := lRunner.Command(cmdPipeOut)
+		if err != nil {
+			return err
+		}
+		localStdout, err := cmdLocal.StdoutPipe()
 		if err != nil {
 			return err
 		}
@@ -217,16 +226,28 @@ func testPipe(d bool) error {
 		if err != nil {
 			return err
 		}
+		remoteStdin, err := cmdRemote.StdinPipe()
+		if err != nil {
+			return err
+		}
 		if err = cmdRemote.Start(); err != nil {
 			return err
 		}
-		if _, err = io.Copy(cmdRemote.StdinPipe(), cmdLocal.StdoutPipe()); err != nil {
+		if _, err = io.Copy(remoteStdin, localStdout); err != nil {
+			return err
+		}
+		err = remoteStdin.Close()
+		if err != nil {
 			return err
 		}
 		return cmdLocal.Wait()
 	}
-	// remote2local:
+
 	cmdLocal, err := lRunner.Command(cmdPipeIn)
+	if err != nil {
+		return err
+	}
+	localStdin, err := cmdLocal.StdinPipe()
 	if err != nil {
 		return err
 	}
@@ -237,10 +258,18 @@ func testPipe(d bool) error {
 	if err != nil {
 		return err
 	}
+	remoteStdout, err := cmdRemote.StdoutPipe()
+	if err != nil {
+		return err
+	}
 	if err = cmdRemote.Start(); err != nil {
 		return err
 	}
-	if _, err := io.Copy(cmdLocal.StdinPipe(), cmdRemote.StdoutPipe()); err != nil {
+	if _, err = io.Copy(localStdin, remoteStdout); err != nil {
+		return err
+	}
+	err = localStdin.Close()
+	if err != nil {
 		return err
 	}
 	return cmdRemote.Wait()

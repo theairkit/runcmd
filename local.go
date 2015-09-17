@@ -8,10 +8,7 @@ import (
 )
 
 type LocalCmd struct {
-	stdinPipe  io.WriteCloser
-	stdoutPipe io.Reader
-	stderrPipe io.Reader
-	cmd        *exec.Cmd
+	cmd *exec.Cmd
 }
 
 type Local struct{}
@@ -24,24 +21,10 @@ func (runner *Local) Command(cmd string) (CmdWorker, error) {
 	if cmd == "" {
 		return nil, errors.New("command cannot be empty")
 	}
-	c := exec.Command(strings.Fields(cmd)[0], strings.Fields(cmd)[1:]...)
-	stdinPipe, err := c.StdinPipe()
-	if err != nil {
-		return nil, err
-	}
-	stdoutPipe, err := c.StdoutPipe()
-	if err != nil {
-		return nil, err
-	}
-	stderrPipe, err := c.StderrPipe()
-	if err != nil {
-		return nil, err
-	}
+
+	command := exec.Command(strings.Fields(cmd)[0], strings.Fields(cmd)[1:]...)
 	return &LocalCmd{
-		stdinPipe,
-		stdoutPipe,
-		stderrPipe,
-		c,
+		command,
 	}, nil
 }
 
@@ -58,19 +41,19 @@ func (cmd *LocalCmd) Start() error {
 }
 
 func (cmd *LocalCmd) Wait() error {
-	if err := cmd.stdinPipe.Close(); err != nil && err != io.EOF {
-		return err
-	}
-
 	return cmd.cmd.Wait()
 }
 
-func (cmd *LocalCmd) StdinPipe() io.WriteCloser {
-	return cmd.stdinPipe
+func (cmd *LocalCmd) StdinPipe() (io.WriteCloser, error) {
+	return cmd.cmd.StdinPipe()
 }
 
-func (cmd *LocalCmd) StdoutPipe() io.Reader {
-	return cmd.stdoutPipe
+func (cmd *LocalCmd) StdoutPipe() (io.Reader, error) {
+	return cmd.cmd.StdoutPipe()
+}
+
+func (cmd *LocalCmd) StderrPipe() (io.Reader, error) {
+	return cmd.cmd.StderrPipe()
 }
 
 func (cmd *LocalCmd) SetStdout(buffer io.Writer) {
@@ -79,8 +62,4 @@ func (cmd *LocalCmd) SetStdout(buffer io.Writer) {
 
 func (cmd *LocalCmd) SetStderr(buffer io.Writer) {
 	cmd.cmd.Stderr = buffer
-}
-
-func (cmd *LocalCmd) StderrPipe() io.Reader {
-	return cmd.stderrPipe
 }
