@@ -2,12 +2,14 @@ package runcmd
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"strings"
 )
 
 type ExecError struct {
 	ExecutionError error
+	CommandLine    string
 	Output         []string
 }
 
@@ -24,17 +26,24 @@ type CmdWorker interface {
 	StderrPipe() (io.Reader, error)
 	SetStdout(buffer io.Writer)
 	SetStderr(buffer io.Writer)
+	GetCommandLine() string
 }
 
 func newExecError(
-	execErr error, output []string,
+	execErr error, cmdline string, output []string,
 ) ExecError {
-	return ExecError{execErr, output}
+	return ExecError{execErr, cmdline, output}
 }
 
 func (err ExecError) Error() string {
-	errString := err.ExecutionError.Error()
-	errString = errString + "\n" + strings.Join(err.Output, "\n")
+	errString := fmt.Sprintf(
+		"`%s` failed: %s", err.CommandLine, err.ExecutionError,
+	)
+
+	output := strings.Join(err.Output, "\n")
+	if strings.TrimSpace(output) != "" {
+		errString = errString + ", output: \n" + output
+	}
 
 	return errString
 }
@@ -49,7 +58,7 @@ func run(worker CmdWorker) ([]string, error) {
 	output := strings.Split(string(buffer.Bytes()), "\n")
 
 	if err != nil {
-		return nil, newExecError(err, output)
+		return nil, newExecError(err, worker.GetCommandLine(), output)
 	}
 
 	return output, nil
