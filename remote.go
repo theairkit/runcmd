@@ -10,11 +10,8 @@ import (
 )
 
 type RemoteCmd struct {
-	stdinPipe  io.WriteCloser
-	stdoutPipe io.Reader
-	stderrPipe io.Reader
-	cmd        string
-	session    *ssh.Session
+	cmd     string
+	session *ssh.Session
 }
 
 type Remote struct {
@@ -25,11 +22,11 @@ func NewRemoteKeyAuthRunner(user, host, key string) (*Remote, error) {
 	if _, err := os.Stat(key); os.IsNotExist(err) {
 		return nil, err
 	}
-	bs, err := ioutil.ReadFile(key)
+	pemBytes, err := ioutil.ReadFile(key)
 	if err != nil {
 		return nil, err
 	}
-	signer, err := ssh.ParsePrivateKey(bs)
+	signer, err := ssh.ParsePrivateKey(pemBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -66,27 +63,9 @@ func (runner *Remote) Command(cmd string) (CmdWorker, error) {
 		return nil, err
 	}
 
-	stdinPipe, err := session.StdinPipe()
-	if err != nil {
-		return nil, err
-	}
-
-	stdoutPipe, err := session.StdoutPipe()
-	if err != nil {
-		return nil, err
-	}
-
-	stderrPipe, err := session.StderrPipe()
-	if err != nil {
-		return nil, err
-	}
-
 	return &RemoteCmd{
-		stdinPipe,
-		stdoutPipe,
-		stderrPipe,
-		cmd,
-		session,
+		cmd:     cmd,
+		session: session,
 	}, nil
 }
 
@@ -111,26 +90,19 @@ func (cmd *RemoteCmd) Start() error {
 func (cmd *RemoteCmd) Wait() error {
 	defer cmd.session.Close()
 
-	// In cmd case EOF is not error: http://golang.org/pkg/io/
-	// EOF is the error returned by Read when no more input is available.
-	// Functions should return EOF only to signal a graceful end of input.
-	if err := cmd.stdinPipe.Close(); err != nil && err != io.EOF {
-		return err
-	}
-
 	return cmd.session.Wait()
 }
 
-func (cmd *RemoteCmd) StdinPipe() io.WriteCloser {
-	return cmd.stdinPipe
+func (cmd *RemoteCmd) StdinPipe() (io.WriteCloser, error) {
+	return cmd.session.StdinPipe()
 }
 
-func (cmd *RemoteCmd) StdoutPipe() io.Reader {
-	return cmd.stdoutPipe
+func (cmd *RemoteCmd) StdoutPipe() (io.Reader, error) {
+	return cmd.session.StdoutPipe()
 }
 
-func (cmd *RemoteCmd) StderrPipe() io.Reader {
-	return cmd.stderrPipe
+func (cmd *RemoteCmd) StderrPipe() (io.Reader, error) {
+	return cmd.session.StderrPipe()
 }
 
 func (cmd *RemoteCmd) SetStdout(buffer io.Writer) {

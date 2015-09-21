@@ -19,9 +19,9 @@ type CmdWorker interface {
 	Run() ([]string, error)
 	Start() error
 	Wait() error
-	StdinPipe() io.WriteCloser
-	StdoutPipe() io.Reader
-	StderrPipe() io.Reader
+	StdinPipe() (io.WriteCloser, error)
+	StdoutPipe() (io.Reader, error)
+	StderrPipe() (io.Reader, error)
 	SetStdout(buffer io.Writer)
 	SetStderr(buffer io.Writer)
 }
