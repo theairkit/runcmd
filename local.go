@@ -8,7 +8,8 @@ import (
 )
 
 type LocalCmd struct {
-	cmd *exec.Cmd
+	cmdline string
+	cmd     *exec.Cmd
 }
 
 type Local struct{}
@@ -17,14 +18,15 @@ func NewLocalRunner() (*Local, error) {
 	return &Local{}, nil
 }
 
-func (runner *Local) Command(cmd string) (CmdWorker, error) {
-	if cmd == "" {
+func (runner *Local) Command(cmdline string) (CmdWorker, error) {
+	if cmdline == "" {
 		return nil, errors.New("command cannot be empty")
 	}
 
-	command := exec.Command(strings.Fields(cmd)[0], strings.Fields(cmd)[1:]...)
+	command := exec.Command(strings.Fields(cmdline)[0], strings.Fields(cmdline)[1:]...)
 	return &LocalCmd{
-		command,
+		cmdline: cmdline,
+		cmd:     command,
 	}, nil
 }
 
@@ -62,4 +64,8 @@ func (cmd *LocalCmd) SetStdout(buffer io.Writer) {
 
 func (cmd *LocalCmd) SetStderr(buffer io.Writer) {
 	cmd.cmd.Stderr = buffer
+}
+
+func (cmd *LocalCmd) GetCommandLine() string {
+	return cmd.cmdline
 }

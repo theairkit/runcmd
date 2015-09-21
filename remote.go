@@ -10,7 +10,7 @@ import (
 )
 
 type RemoteCmd struct {
-	cmd     string
+	cmdline string
 	session *ssh.Session
 }
 
@@ -53,8 +53,8 @@ func NewRemotePassAuthRunner(user, host, password string) (*Remote, error) {
 	return &Remote{server}, nil
 }
 
-func (runner *Remote) Command(cmd string) (CmdWorker, error) {
-	if cmd == "" {
+func (runner *Remote) Command(cmdline string) (CmdWorker, error) {
+	if cmdline == "" {
 		return nil, errors.New("command cannot be empty")
 	}
 
@@ -64,7 +64,7 @@ func (runner *Remote) Command(cmd string) (CmdWorker, error) {
 	}
 
 	return &RemoteCmd{
-		cmd:     cmd,
+		cmdline: cmdline,
 		session: session,
 	}, nil
 }
@@ -84,7 +84,7 @@ func (cmd *RemoteCmd) Run() ([]string, error) {
 }
 
 func (cmd *RemoteCmd) Start() error {
-	return cmd.session.Start(cmd.cmd)
+	return cmd.session.Start(cmd.cmdline)
 }
 
 func (cmd *RemoteCmd) Wait() error {
@@ -111,4 +111,8 @@ func (cmd *RemoteCmd) SetStdout(buffer io.Writer) {
 
 func (cmd *RemoteCmd) SetStderr(buffer io.Writer) {
 	cmd.session.Stderr = buffer
+}
+
+func (cmd *RemoteCmd) GetCommandLine() string {
+	return cmd.cmdline
 }
