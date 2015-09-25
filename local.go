@@ -2,9 +2,9 @@ package runcmd
 
 import (
 	"errors"
+	"github.com/mattn/go-shellwords"
 	"io"
 	"os/exec"
-	"strings"
 )
 
 type LocalCmd struct {
@@ -23,7 +23,14 @@ func (runner *Local) Command(cmdline string) (CmdWorker, error) {
 		return nil, errors.New("command cannot be empty")
 	}
 
-	command := exec.Command(strings.Fields(cmdline)[0], strings.Fields(cmdline)[1:]...)
+	parser := shellwords.NewParser()
+	parser.ParseBacktick = false
+	parser.ParseEnv = false
+	args, err := parser.Parse(cmdline)
+	if err != nil {
+		return nil, errors.New("cannot parse cmdline")
+	}
+	command := exec.Command(args[0], args[1:]...)
 	return &LocalCmd{
 		cmdline: cmdline,
 		cmd:     command,
