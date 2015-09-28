@@ -18,6 +18,9 @@ var (
 	cmdPipeOut    = "date"
 	cmdPipeIn     = "/usr/bin/tee /tmp/blah"
 
+	quotedMsg = "some message"
+	cmdQuoted = "bash -c 'echo \"" + quotedMsg + "\"'"
+
 	// Change it before running the tests:
 	user = "user"
 	host = "127.0.0.1:22"
@@ -273,4 +276,30 @@ func testPipe(localToRemote bool) error {
 		return err
 	}
 	return cmdRemote.Wait()
+}
+
+func TestQuotedRun(t *testing.T) {
+	lRunner, err := NewLocalRunner()
+	if err != nil {
+		t.Errorf("Can't create local runner: %s", err.Error())
+		return
+	}
+
+	cmdLocal, err := lRunner.Command(cmdQuoted)
+	if err != nil {
+		t.Errorf("Can't create command: %s", err.Error())
+		return
+	}
+
+	t.Log("Cmdline:", cmdLocal.GetCommandLine())
+
+	result, err := cmdLocal.Run()
+	if err != nil {
+		t.Errorf("Error during run: %s", err.Error())
+		return
+	}
+
+	if result[0] != quotedMsg {
+		t.Errorf("Quoted command error: %#v", result)
+	}
 }
