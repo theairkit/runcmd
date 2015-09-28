@@ -2,6 +2,7 @@ package runcmd
 
 import (
 	"errors"
+	"fmt"
 	"github.com/mattn/go-shellwords"
 	"io"
 	"os/exec"
@@ -28,8 +29,9 @@ func (runner *Local) Command(cmdline string) (CmdWorker, error) {
 	parser.ParseEnv = false
 	args, err := parser.Parse(cmdline)
 	if err != nil {
-		return nil, errors.New("cannot parse cmdline")
+		return nil, fmt.Errorf("cannot parse cmdline: %s", err.Error())
 	}
+
 	command := exec.Command(args[0], args[1:]...)
 	return &LocalCmd{
 		cmdline: cmdline,
