@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"code.google.com/p/go.crypto/ssh"
+	"golang.org/x/crypto/ssh"
 )
 
 type RemoteCmd struct {
@@ -75,10 +75,6 @@ func (runner *Remote) CloseConnection() error {
 
 func (cmd *RemoteCmd) Run() ([]string, error) {
 	defer cmd.session.Close()
-
-	if err := cmd.Start(); err != nil {
-		return nil, err
-	}
 
 	return run(cmd)
 }
