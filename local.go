@@ -40,9 +40,6 @@ func (runner *Local) Command(cmdline string) (CmdWorker, error) {
 }
 
 func (cmd *LocalCmd) Run() ([]string, error) {
-	if err := cmd.Start(); err != nil {
-		return nil, err
-	}
 
 	return run(cmd)
 }

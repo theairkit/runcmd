@@ -76,10 +76,6 @@ func (runner *Remote) CloseConnection() error {
 func (cmd *RemoteCmd) Run() ([]string, error) {
 	defer cmd.session.Close()
 
-	if err := cmd.Start(); err != nil {
-		return nil, err
-	}
-
 	return run(cmd)
 }
 

@@ -54,8 +54,12 @@ func run(worker CmdWorker) ([]string, error) {
 	worker.SetStdout(&buffer)
 	worker.SetStderr(&buffer)
 
+	if err := worker.Start(); err != nil {
+		return nil, err
+	}
+
 	err := worker.Wait()
-	output := strings.Split(string(buffer.Bytes()), "\n")
+	output := strings.Split(buffer.String(), "\n")
 
 	if err != nil {
 		return nil, newExecError(err, worker.GetCommandLine(), output)
