@@ -281,25 +281,26 @@ func testPipe(localToRemote bool) error {
 func TestQuotedRun(t *testing.T) {
 	lRunner, err := NewLocalRunner()
 	if err != nil {
-		t.Errorf("Can't create local runner: %s", err.Error())
-		return
+		t.Fatalf("Can't create local runner: %s", err.Error())
 	}
 
 	cmdLocal, err := lRunner.Command(cmdQuoted)
 	if err != nil {
-		t.Errorf("Can't create command: %s", err.Error())
-		return
+		t.Fatalf("Can't create command: %s", err.Error())
 	}
 
 	t.Log("Cmdline:", cmdLocal.GetCommandLine())
 
 	result, err := cmdLocal.Run()
 	if err != nil {
-		t.Errorf("Error during run: %s", err.Error())
-		return
+		t.Fatalf("Error during run: %s", err.Error())
+	}
+
+	if len(result) == 0 {
+		t.Fatalf("Command [%s] return empty result", cmdLocal.GetCommandLine())
 	}
 
 	if result[0] != quotedMsg {
-		t.Errorf("Quoted command error: %#v", result)
+		t.Fatalf("Quoted command error: %#v", result)
 	}
 }
