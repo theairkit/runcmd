@@ -4,7 +4,9 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
+	"net"
 	"os"
+	"time"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -16,6 +18,121 @@ type RemoteCmd struct {
 
 type Remote struct {
 	serverConn *ssh.Client
+}
+
+type Timeouts struct {
+	ConnectionTimeout time.Duration
+	SendTimeout       time.Duration
+	RecieveTimeout    time.Duration
+	KeepAlive         time.Duration
+}
+
+type timeBoundedConnection struct {
+	net.Conn
+	readTimeout  time.Duration
+	writeTimeout time.Duration
+}
+
+func (connection *timeBoundedConnection) Read(p []byte) (int, error) {
+	err := connection.Conn.SetReadDeadline(time.Now().Add(
+		connection.readTimeout,
+	))
+	if err != nil {
+		return 0, err
+	}
+
+	return connection.Conn.Read(p)
+}
+
+func (connection *timeBoundedConnection) Write(p []byte) (int, error) {
+	err := connection.Conn.SetWriteDeadline(time.Now().Add(
+		connection.writeTimeout,
+	))
+	if err != nil {
+		return 0, err
+	}
+
+	return connection.Conn.Write(p)
+}
+
+func NewRemoteKeyAuthRunnerWithTimeouts(
+	user, host, key string, timeouts Timeouts,
+) (*Remote, error) {
+	if _, err := os.Stat(key); os.IsNotExist(err) {
+		return nil, err
+	}
+
+	pemBytes, err := ioutil.ReadFile(key)
+	if err != nil {
+		return nil, err
+	}
+
+	signer, err := ssh.ParsePrivateKey(pemBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	config := &ssh.ClientConfig{
+		User: user,
+		Auth: []ssh.AuthMethod{ssh.PublicKeys(signer)},
+	}
+
+	dialer := net.Dialer{
+		Timeout:   timeouts.ConnectionTimeout,
+		Deadline:  time.Now().Add(timeouts.ConnectionTimeout),
+		KeepAlive: timeouts.KeepAlive,
+	}
+
+	conn, err := dialer.Dial("tcp", host)
+	if err != nil {
+		return nil, err
+	}
+
+	connection := &timeBoundedConnection{
+		conn, timeouts.SendTimeout, timeouts.RecieveTimeout,
+	}
+
+	sshConnection, channels, requests, err := ssh.NewClientConn(
+		connection, host, config,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Remote{ssh.NewClient(sshConnection, channels, requests)}, nil
+}
+
+func NewRemotePassAuthRunnerWithTimeouts(
+	user, host, password string, timeouts Timeouts,
+) (*Remote, error) {
+	config := &ssh.ClientConfig{
+		User: user,
+		Auth: []ssh.AuthMethod{ssh.Password(password)},
+	}
+
+	dialer := net.Dialer{
+		Timeout:   timeouts.ConnectionTimeout,
+		Deadline:  time.Now().Add(timeouts.ConnectionTimeout),
+		KeepAlive: timeouts.KeepAlive,
+	}
+
+	conn, err := dialer.Dial("tcp", host)
+	if err != nil {
+		return nil, err
+	}
+
+	connection := &timeBoundedConnection{
+		conn, timeouts.SendTimeout, timeouts.RecieveTimeout,
+	}
+
+	sshConnection, channels, requests, err := ssh.NewClientConn(
+		connection, host, config,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Remote{ssh.NewClient(sshConnection, channels, requests)}, nil
 }
 
 func NewRemoteKeyAuthRunner(user, host, key string) (*Remote, error) {
