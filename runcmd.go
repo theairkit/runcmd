@@ -7,16 +7,19 @@ import (
 	"strings"
 )
 
+// ExecError is type for generating better error messages
 type ExecError struct {
 	ExecutionError error
 	CommandLine    string
 	Output         []string
 }
 
+// Runner is interface for creating workers
 type Runner interface {
 	Command(cmd string) (CmdWorker, error)
 }
 
+// CmdWorker is interface for executing commands
 type CmdWorker interface {
 	Run() ([]string, error)
 	Start() error

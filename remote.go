@@ -11,15 +11,18 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+// RemoteCmd is implementation of CmdWorker interface for remote commands
 type RemoteCmd struct {
 	cmdline string
 	session *ssh.Session
 }
 
+// Remote is implementation of Runner interface for remote commands
 type Remote struct {
 	serverConn *ssh.Client
 }
 
+// Timeouts is struct for setting various timeouts for ssh connection
 type Timeouts struct {
 	ConnectionTimeout time.Duration
 	SendTimeout       time.Duration
@@ -55,6 +58,8 @@ func (connection *timeBoundedConnection) Write(p []byte) (int, error) {
 	return connection.Conn.Write(p)
 }
 
+// NewRemoteKeyAuthRunnerWithTimeouts is one of functions for creating remote
+// runner
 func NewRemoteKeyAuthRunnerWithTimeouts(
 	user, host, key string, timeouts Timeouts,
 ) (*Remote, error) {
@@ -104,6 +109,8 @@ func NewRemoteKeyAuthRunnerWithTimeouts(
 	return &Remote{ssh.NewClient(sshConnection, channels, requests)}, nil
 }
 
+// NewRemotePassAuthRunnerWithTimeouts is one of functions for creating remote
+// runner
 func NewRemotePassAuthRunnerWithTimeouts(
 	user, host, password string, timeouts Timeouts,
 ) (*Remote, error) {
@@ -139,6 +146,7 @@ func NewRemotePassAuthRunnerWithTimeouts(
 	return &Remote{ssh.NewClient(sshConnection, channels, requests)}, nil
 }
 
+// NewRemoteKeyAuthRunner is one of functions for creating remote runner
 func NewRemoteKeyAuthRunner(user, host, key string) (*Remote, error) {
 	if _, err := os.Stat(key); os.IsNotExist(err) {
 		return nil, err
@@ -162,6 +170,7 @@ func NewRemoteKeyAuthRunner(user, host, key string) (*Remote, error) {
 	return &Remote{server}, nil
 }
 
+// NewRemotePassAuthRunner is one of functions for creating remote runner
 func NewRemotePassAuthRunner(user, host, password string) (*Remote, error) {
 	config := &ssh.ClientConfig{
 		User: user,
@@ -174,6 +183,7 @@ func NewRemotePassAuthRunner(user, host, password string) (*Remote, error) {
 	return &Remote{server}, nil
 }
 
+// Command method create worker for execution current command
 func (runner *Remote) Command(cmdline string) (CmdWorker, error) {
 	if cmdline == "" {
 		return nil, errors.New("command cannot be empty")
@@ -190,46 +200,67 @@ func (runner *Remote) Command(cmdline string) (CmdWorker, error) {
 	}, nil
 }
 
+// CloseConnection is method for closing ssh connection of current runner
 func (runner *Remote) CloseConnection() error {
 	return runner.serverConn.Close()
 }
 
-func (cmd *RemoteCmd) Run() ([]string, error) {
-	defer cmd.session.Close()
+// Run method execute current command and retun output splitted by newline
+func (cmd *RemoteCmd) Run() (result []string, err error) {
+	defer func() {
+		closeErr := cmd.session.Close()
+		if err == nil {
+			err = errors.New("can't close ssh session: " + closeErr.Error())
+		}
+	}()
 
 	return run(cmd)
 }
 
+// Start method begin current command execution
 func (cmd *RemoteCmd) Start() error {
 	return cmd.session.Start(cmd.cmdline)
 }
 
-func (cmd *RemoteCmd) Wait() error {
-	defer cmd.session.Close()
+// Wait method return error after end of command execution if current command
+// return nonzero exit code
+func (cmd *RemoteCmd) Wait() (err error) {
+	defer func() {
+		closeErr := cmd.session.Close()
+		if err == nil {
+			err = errors.New("can't close ssh session: " + closeErr.Error())
+		}
+	}()
 
 	return cmd.session.Wait()
 }
 
+// StdinPipe metod return stdin of current worker
 func (cmd *RemoteCmd) StdinPipe() (io.WriteCloser, error) {
 	return cmd.session.StdinPipe()
 }
 
+// StdoutPipe metod return stdout of current worker
 func (cmd *RemoteCmd) StdoutPipe() (io.Reader, error) {
 	return cmd.session.StdoutPipe()
 }
 
+// StderrPipe metod return stderr of current worker
 func (cmd *RemoteCmd) StderrPipe() (io.Reader, error) {
 	return cmd.session.StderrPipe()
 }
 
+// SetStdout is method for binding your own writer to worker stdout
 func (cmd *RemoteCmd) SetStdout(buffer io.Writer) {
 	cmd.session.Stdout = buffer
 }
 
+// SetStderr is method for binding your own writer to worker stderr
 func (cmd *RemoteCmd) SetStderr(buffer io.Writer) {
 	cmd.session.Stderr = buffer
 }
 
+// GetCommandLine method return cmdline for current worker
 func (cmd *RemoteCmd) GetCommandLine() string {
 	return cmd.cmdline
 }
