@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"testing"
+	"time"
 )
 
 var (
@@ -20,6 +21,12 @@ var (
 
 	quotedMsg = "some message"
 	cmdQuoted = "bash -c 'echo \"" + quotedMsg + "\"'"
+	timeouts  = Timeouts{
+		ConnectionTimeout: 3 * time.Second,
+		KeepAlive:         1 * time.Second,
+		ReceiveTimeout:    3 * time.Second,
+		SendTimeout:       3 * time.Second,
+	}
 
 	// Change it before running the tests:
 	user = "user"
@@ -45,6 +52,28 @@ func TestPassAuth(t *testing.T) {
 		}
 	}()
 	rRunner, err := NewRemotePassAuthRunner(user, host, pass)
+	if err != nil {
+		t.Error(err)
+	}
+	if err := testRun(rRunner); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestKeyAuthTimeout(t *testing.T) {
+	rRunner, err := NewRemoteKeyAuthRunnerWithTimeouts(user, host, key, timeouts)
+	if err != nil {
+		t.Error(err)
+	}
+	if err := testRun(rRunner); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestPassAuthTimeout(t *testing.T) {
+	rRunner, err := NewRemotePassAuthRunnerWithTimeouts(
+		user, host, pass, timeouts,
+	)
 	if err != nil {
 		t.Error(err)
 	}
@@ -214,36 +243,10 @@ func testPipe(localToRemote bool) error {
 	}
 
 	if localToRemote {
-		cmdLocal, err := lRunner.Command(cmdPipeOut)
+		err := testLocalToRemote(lRunner, rRunner)
 		if err != nil {
 			return err
 		}
-		localStdout, err := cmdLocal.StdoutPipe()
-		if err != nil {
-			return err
-		}
-		if err = cmdLocal.Start(); err != nil {
-			return err
-		}
-		cmdRemote, err := rRunner.Command(cmdPipeIn)
-		if err != nil {
-			return err
-		}
-		remoteStdin, err := cmdRemote.StdinPipe()
-		if err != nil {
-			return err
-		}
-		if err = cmdRemote.Start(); err != nil {
-			return err
-		}
-		if _, err = io.Copy(remoteStdin, localStdout); err != nil {
-			return err
-		}
-		err = remoteStdin.Close()
-		if err != nil {
-			return err
-		}
-		return cmdLocal.Wait()
 	}
 
 	cmdLocal, err := lRunner.Command(cmdPipeIn)
@@ -276,6 +279,39 @@ func testPipe(localToRemote bool) error {
 		return err
 	}
 	return cmdRemote.Wait()
+}
+
+func testLocalToRemote(lRunner *Local, rRunner *Remote) error {
+	cmdLocal, err := lRunner.Command(cmdPipeOut)
+	if err != nil {
+		return err
+	}
+	localStdout, err := cmdLocal.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	if err = cmdLocal.Start(); err != nil {
+		return err
+	}
+	cmdRemote, err := rRunner.Command(cmdPipeIn)
+	if err != nil {
+		return err
+	}
+	remoteStdin, err := cmdRemote.StdinPipe()
+	if err != nil {
+		return err
+	}
+	if err = cmdRemote.Start(); err != nil {
+		return err
+	}
+	if _, err = io.Copy(remoteStdin, localStdout); err != nil {
+		return err
+	}
+	err = remoteStdin.Close()
+	if err != nil {
+		return err
+	}
+	return cmdLocal.Wait()
 }
 
 func TestQuotedRun(t *testing.T) {

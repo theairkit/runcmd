@@ -3,9 +3,10 @@ package runcmd
 import (
 	"errors"
 	"fmt"
-	"github.com/mattn/go-shellwords"
 	"io"
 	"os/exec"
+
+	"github.com/mattn/go-shellwords"
 )
 
 type LocalCmd struct {

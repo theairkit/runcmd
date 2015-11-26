@@ -23,7 +23,7 @@ type Remote struct {
 type Timeouts struct {
 	ConnectionTimeout time.Duration
 	SendTimeout       time.Duration
-	RecieveTimeout    time.Duration
+	ReceiveTimeout    time.Duration
 	KeepAlive         time.Duration
 }
 
@@ -69,7 +69,7 @@ func NewRemoteKeyAuthRunnerWithTimeouts(
 
 	signer, err := ssh.ParsePrivateKey(pemBytes)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("can't parse pem data: " + err.Error())
 	}
 
 	config := &ssh.ClientConfig{
@@ -89,7 +89,9 @@ func NewRemoteKeyAuthRunnerWithTimeouts(
 	}
 
 	connection := &timeBoundedConnection{
-		conn, timeouts.SendTimeout, timeouts.RecieveTimeout,
+		Conn:         conn,
+		readTimeout:  timeouts.SendTimeout,
+		writeTimeout: timeouts.ReceiveTimeout,
 	}
 
 	sshConnection, channels, requests, err := ssh.NewClientConn(
@@ -122,7 +124,9 @@ func NewRemotePassAuthRunnerWithTimeouts(
 	}
 
 	connection := &timeBoundedConnection{
-		conn, timeouts.SendTimeout, timeouts.RecieveTimeout,
+		Conn:         conn,
+		readTimeout:  timeouts.SendTimeout,
+		writeTimeout: timeouts.ReceiveTimeout,
 	}
 
 	sshConnection, channels, requests, err := ssh.NewClientConn(
