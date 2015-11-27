@@ -209,8 +209,10 @@ func (runner *Remote) CloseConnection() error {
 func (cmd *RemoteCmd) Run() (result []string, err error) {
 	defer func() {
 		closeErr := cmd.session.Close()
-		if err == nil {
-			err = errors.New("can't close ssh session: " + closeErr.Error())
+		if err == nil && closeErr != nil {
+			if closeErr.Error() != "EOF" {
+				err = errors.New("can't close ssh session: " + closeErr.Error())
+			}
 		}
 	}()
 
@@ -227,8 +229,10 @@ func (cmd *RemoteCmd) Start() error {
 func (cmd *RemoteCmd) Wait() (err error) {
 	defer func() {
 		closeErr := cmd.session.Close()
-		if err == nil {
-			err = errors.New("can't close ssh session: " + closeErr.Error())
+		if err == nil && closeErr != nil {
+			if closeErr.Error() != "EOF" {
+				err = errors.New("can't close ssh session: " + closeErr.Error())
+			}
 		}
 	}()
 
