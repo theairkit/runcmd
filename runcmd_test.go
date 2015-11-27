@@ -148,6 +148,22 @@ func testRun(runner Runner) error {
 		fmt.Println(i)
 	}
 
+	// Correct output
+	cmd, err = runner.Command("echo ok")
+	if err != nil {
+		return err
+	}
+	output, err := cmd.Run()
+	if err != nil {
+		return err
+	}
+	if len(output) != 1 {
+		return errors.New("bad output lengh")
+	}
+	if output[0] != "ok" {
+		return errors.New("invalid output")
+	}
+
 	// Valid command with invalid keys:
 	cmd, err = runner.Command(cmdInvalidKey)
 	if err != nil {
