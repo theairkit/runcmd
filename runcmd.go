@@ -62,7 +62,7 @@ func run(worker CmdWorker) ([]string, error) {
 	}
 
 	err := worker.Wait()
-	output := strings.Split(buffer.String(), "\n")
+	output := strings.Split(strings.Trim(buffer.String(), "\n"), "\n")
 
 	if err != nil {
 		return nil, newExecError(err, worker.GetCommandLine(), output)
