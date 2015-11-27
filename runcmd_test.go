@@ -158,7 +158,7 @@ func testRun(runner Runner) error {
 		return err
 	}
 	if len(output) != 1 {
-		return errors.New("bad output lengh")
+		return errors.New("bad output length")
 	}
 	if output[0] != "ok" {
 		return errors.New("invalid output")

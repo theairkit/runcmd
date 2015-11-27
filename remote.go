@@ -59,7 +59,8 @@ func (connection *timeBoundedConnection) Write(p []byte) (int, error) {
 }
 
 // NewRemoteKeyAuthRunnerWithTimeouts is one of functions for creating remote
-// runner
+// runner. Use this one instead of NewRemoteKeyAuthRunner if you need to setup
+// nondefault timeouts for ssh connection
 func NewRemoteKeyAuthRunnerWithTimeouts(
 	user, host, key string, timeouts Timeouts,
 ) (*Remote, error) {
@@ -110,7 +111,8 @@ func NewRemoteKeyAuthRunnerWithTimeouts(
 }
 
 // NewRemotePassAuthRunnerWithTimeouts is one of functions for creating remote
-// runner
+// runner. Use this one instead of NewRemotePassAuthRunner if you need to setup
+// nondefault timeouts for ssh connection
 func NewRemotePassAuthRunnerWithTimeouts(
 	user, host, password string, timeouts Timeouts,
 ) (*Remote, error) {
@@ -183,7 +185,7 @@ func NewRemotePassAuthRunner(user, host, password string) (*Remote, error) {
 	return &Remote{server}, nil
 }
 
-// Command method create worker for execution current command
+// Command creates worker for current command execution
 func (runner *Remote) Command(cmdline string) (CmdWorker, error) {
 	if cmdline == "" {
 		return nil, errors.New("command cannot be empty")
@@ -205,7 +207,7 @@ func (runner *Remote) CloseConnection() error {
 	return runner.serverConn.Close()
 }
 
-// Run method execute current command and retun output splitted by newline
+// Run executes current command and returns output splitted by newline
 func (cmd *RemoteCmd) Run() (result []string, err error) {
 	defer func() {
 		closeErr := cmd.session.Close()
@@ -219,13 +221,13 @@ func (cmd *RemoteCmd) Run() (result []string, err error) {
 	return run(cmd)
 }
 
-// Start method begin current command execution
+// Start begins current command execution
 func (cmd *RemoteCmd) Start() error {
 	return cmd.session.Start(cmd.cmdline)
 }
 
-// Wait method return error after end of command execution if current command
-// return nonzero exit code
+// Wait returns error after command execution if current command return nonzero
+// exit code
 func (cmd *RemoteCmd) Wait() (err error) {
 	defer func() {
 		closeErr := cmd.session.Close()
@@ -239,17 +241,17 @@ func (cmd *RemoteCmd) Wait() (err error) {
 	return cmd.session.Wait()
 }
 
-// StdinPipe metod return stdin of current worker
+// StdinPipe returns stdin of current worker
 func (cmd *RemoteCmd) StdinPipe() (io.WriteCloser, error) {
 	return cmd.session.StdinPipe()
 }
 
-// StdoutPipe metod return stdout of current worker
+// StdoutPipe returns stdout of current worker
 func (cmd *RemoteCmd) StdoutPipe() (io.Reader, error) {
 	return cmd.session.StdoutPipe()
 }
 
-// StderrPipe metod return stderr of current worker
+// StderrPipe returns stderr of current worker
 func (cmd *RemoteCmd) StderrPipe() (io.Reader, error) {
 	return cmd.session.StderrPipe()
 }
@@ -264,7 +266,7 @@ func (cmd *RemoteCmd) SetStderr(buffer io.Writer) {
 	cmd.session.Stderr = buffer
 }
 
-// GetCommandLine method return cmdline for current worker
+// GetCommandLine returns cmdline for current worker
 func (cmd *RemoteCmd) GetCommandLine() string {
 	return cmd.cmdline
 }
