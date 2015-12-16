@@ -37,22 +37,26 @@ type timeBoundedConnection struct {
 }
 
 func (connection *timeBoundedConnection) Read(p []byte) (int, error) {
-	err := connection.Conn.SetReadDeadline(time.Now().Add(
-		connection.readTimeout,
-	))
-	if err != nil {
-		return 0, err
+	if connection.readTimeout != 0 {
+		err := connection.Conn.SetReadDeadline(time.Now().Add(
+			connection.readTimeout,
+		))
+		if err != nil {
+			return 0, err
+		}
 	}
 
 	return connection.Conn.Read(p)
 }
 
 func (connection *timeBoundedConnection) Write(p []byte) (int, error) {
-	err := connection.Conn.SetWriteDeadline(time.Now().Add(
-		connection.writeTimeout,
-	))
-	if err != nil {
-		return 0, err
+	if connection.writeTimeout != 0 {
+		err := connection.Conn.SetWriteDeadline(time.Now().Add(
+			connection.writeTimeout,
+		))
+		if err != nil {
+			return 0, err
+		}
 	}
 
 	return connection.Conn.Write(p)
@@ -85,8 +89,11 @@ func NewRemoteKeyAuthRunnerWithTimeouts(
 
 	dialer := net.Dialer{
 		Timeout:   timeouts.ConnectionTimeout,
-		Deadline:  time.Now().Add(timeouts.ConnectionTimeout),
 		KeepAlive: timeouts.KeepAlive,
+	}
+
+	if timeouts.ConnectionTimeout != 0 {
+		dialer.Deadline = time.Now().Add(timeouts.ConnectionTimeout)
 	}
 
 	conn, err := dialer.Dial("tcp", host)
@@ -123,8 +130,11 @@ func NewRemotePassAuthRunnerWithTimeouts(
 
 	dialer := net.Dialer{
 		Timeout:   timeouts.ConnectionTimeout,
-		Deadline:  time.Now().Add(timeouts.ConnectionTimeout),
 		KeepAlive: timeouts.KeepAlive,
+	}
+
+	if timeouts.ConnectionTimeout != 0 {
+		dialer.Deadline = time.Now().Add(timeouts.ConnectionTimeout)
 	}
 
 	conn, err := dialer.Dial("tcp", host)
