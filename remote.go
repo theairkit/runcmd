@@ -13,13 +13,17 @@ import (
 
 // RemoteCmd is implementation of CmdWorker interface for remote commands
 type RemoteCmd struct {
-	cmdline string
-	session *ssh.Session
+	cmdline    string
+	session    *ssh.Session
+	connection *timeBoundedConnection
+	timeouts   *Timeouts
 }
 
 // Remote is implementation of Runner interface for remote commands
 type Remote struct {
 	serverConn *ssh.Client
+	connection *timeBoundedConnection
+	timeouts   *Timeouts
 }
 
 // Timeouts is struct for setting various timeouts for ssh connection
@@ -102,9 +106,7 @@ func NewRemoteKeyAuthRunnerWithTimeouts(
 	}
 
 	connection := &timeBoundedConnection{
-		Conn:         conn,
-		readTimeout:  timeouts.SendTimeout,
-		writeTimeout: timeouts.ReceiveTimeout,
+		Conn: conn,
 	}
 
 	sshConnection, channels, requests, err := ssh.NewClientConn(
@@ -114,7 +116,11 @@ func NewRemoteKeyAuthRunnerWithTimeouts(
 		return nil, err
 	}
 
-	return &Remote{ssh.NewClient(sshConnection, channels, requests)}, nil
+	return &Remote{
+		serverConn: ssh.NewClient(sshConnection, channels, requests),
+		connection: connection,
+		timeouts:   &timeouts,
+	}, nil
 }
 
 // NewRemotePassAuthRunnerWithTimeouts is one of functions for creating remote
@@ -143,9 +149,7 @@ func NewRemotePassAuthRunnerWithTimeouts(
 	}
 
 	connection := &timeBoundedConnection{
-		Conn:         conn,
-		readTimeout:  timeouts.SendTimeout,
-		writeTimeout: timeouts.ReceiveTimeout,
+		Conn: conn,
 	}
 
 	sshConnection, channels, requests, err := ssh.NewClientConn(
@@ -155,7 +159,11 @@ func NewRemotePassAuthRunnerWithTimeouts(
 		return nil, err
 	}
 
-	return &Remote{ssh.NewClient(sshConnection, channels, requests)}, nil
+	return &Remote{
+		serverConn: ssh.NewClient(sshConnection, channels, requests),
+		connection: connection,
+		timeouts:   &timeouts,
+	}, nil
 }
 
 // NewRemoteKeyAuthRunner is one of functions for creating remote runner
@@ -163,23 +171,32 @@ func NewRemoteKeyAuthRunner(user, host, key string) (*Remote, error) {
 	if _, err := os.Stat(key); os.IsNotExist(err) {
 		return nil, err
 	}
+
 	pemBytes, err := ioutil.ReadFile(key)
 	if err != nil {
 		return nil, err
 	}
+
 	signer, err := ssh.ParsePrivateKey(pemBytes)
 	if err != nil {
 		return nil, err
 	}
+
 	config := &ssh.ClientConfig{
 		User: user,
 		Auth: []ssh.AuthMethod{ssh.PublicKeys(signer)},
 	}
+
 	server, err := ssh.Dial("tcp", host, config)
 	if err != nil {
 		return nil, err
 	}
-	return &Remote{server}, nil
+
+	return &Remote{
+		serverConn: server,
+		connection: nil,
+		timeouts:   nil,
+	}, nil
 }
 
 // NewRemotePassAuthRunner is one of functions for creating remote runner
@@ -188,11 +205,17 @@ func NewRemotePassAuthRunner(user, host, password string) (*Remote, error) {
 		User: user,
 		Auth: []ssh.AuthMethod{ssh.Password(password)},
 	}
+
 	server, err := ssh.Dial("tcp", host, config)
 	if err != nil {
 		return nil, err
 	}
-	return &Remote{server}, nil
+
+	return &Remote{
+		serverConn: server,
+		connection: nil,
+		timeouts:   nil,
+	}, nil
 }
 
 // Command creates worker for current command execution
@@ -207,8 +230,10 @@ func (runner *Remote) Command(cmdline string) (CmdWorker, error) {
 	}
 
 	return &RemoteCmd{
-		cmdline: cmdline,
-		session: session,
+		cmdline:    cmdline,
+		session:    session,
+		connection: runner.connection,
+		timeouts:   runner.timeouts,
 	}, nil
 }
 
@@ -228,11 +253,15 @@ func (cmd *RemoteCmd) Run() (result []string, err error) {
 		}
 	}()
 
+	cmd.initTimeouts()
+
 	return run(cmd)
 }
 
 // Start begins current command execution
 func (cmd *RemoteCmd) Start() error {
+	cmd.initTimeouts()
+
 	return cmd.session.Start(cmd.cmdline)
 }
 
@@ -279,4 +308,12 @@ func (cmd *RemoteCmd) SetStderr(buffer io.Writer) {
 // GetCommandLine returns cmdline for current worker
 func (cmd *RemoteCmd) GetCommandLine() string {
 	return cmd.cmdline
+}
+
+func (cmd *RemoteCmd) initTimeouts() {
+	if cmd.connection == nil {
+		return
+	}
+	cmd.connection.readTimeout = cmd.timeouts.SendTimeout
+	cmd.connection.writeTimeout = cmd.timeouts.ReceiveTimeout
 }
