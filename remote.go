@@ -66,6 +66,8 @@ func (connection *timeBoundedConnection) Write(p []byte) (int, error) {
 	return connection.Conn.Write(p)
 }
 
+// NewRemoteRawKeyAuthRunnerWithTimeouts is same, as NewRemoteKeyAuthRunnerWithTimeouts,
+// but key should be raw byte sequence instead of path.
 func NewRemoteRawKeyAuthRunnerWithTimeouts(
 	user, host, key string, timeouts Timeouts,
 ) (*Remote, error) {
@@ -111,9 +113,9 @@ func NewRemoteRawKeyAuthRunnerWithTimeouts(
 	}, nil
 }
 
-// NewRemoteKeyAuthRunnerWithTimeouts is one of functions for creating remote
-// runner. Use this one instead of NewRemoteKeyAuthRunner if you need to setup
-// nondefault timeouts for ssh connection
+// NewRemoteKeyAuthRunnerWithTimeouts is one of functions for creating
+// remote runner. Use this one instead of NewRemoteKeyAuthRunner if you need to
+// setup nondefault timeouts for ssh connection
 func NewRemoteKeyAuthRunnerWithTimeouts(
 	user, host, key string, timeouts Timeouts,
 ) (*Remote, error) {
