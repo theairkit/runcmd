@@ -66,24 +66,14 @@ func (connection *timeBoundedConnection) Write(p []byte) (int, error) {
 	return connection.Conn.Write(p)
 }
 
-// NewRemoteKeyAuthRunnerWithTimeouts is one of functions for creating remote
-// runner. Use this one instead of NewRemoteKeyAuthRunner if you need to setup
-// nondefault timeouts for ssh connection
-func NewRemoteKeyAuthRunnerWithTimeouts(
+// NewRemoteRawKeyAuthRunnerWithTimeouts is same, as NewRemoteKeyAuthRunnerWithTimeouts,
+// but key should be raw byte sequence instead of path.
+func NewRemoteRawKeyAuthRunnerWithTimeouts(
 	user, host, key string, timeouts Timeouts,
 ) (*Remote, error) {
-	if _, err := os.Stat(key); os.IsNotExist(err) {
-		return nil, err
-	}
-
-	pemBytes, err := ioutil.ReadFile(key)
+	signer, err := ssh.ParsePrivateKey([]byte(key))
 	if err != nil {
-		return nil, err
-	}
-
-	signer, err := ssh.ParsePrivateKey(pemBytes)
-	if err != nil {
-		return nil, errors.New("can't parse pem data: " + err.Error())
+		return nil, errors.New("can't parse PEM data: " + err.Error())
 	}
 
 	config := &ssh.ClientConfig{
@@ -121,6 +111,26 @@ func NewRemoteKeyAuthRunnerWithTimeouts(
 		connection: connection,
 		timeouts:   &timeouts,
 	}, nil
+}
+
+// NewRemoteKeyAuthRunnerWithTimeouts is one of functions for creating
+// remote runner. Use this one instead of NewRemoteKeyAuthRunner if you need to
+// setup nondefault timeouts for ssh connection
+func NewRemoteKeyAuthRunnerWithTimeouts(
+	user, host, key string, timeouts Timeouts,
+) (*Remote, error) {
+	if _, err := os.Stat(key); os.IsNotExist(err) {
+		return nil, err
+	}
+
+	pemBytes, err := ioutil.ReadFile(key)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewRemoteRawKeyAuthRunnerWithTimeouts(
+		user, host, string(pemBytes), timeouts,
+	)
 }
 
 // NewRemotePassAuthRunnerWithTimeouts is one of functions for creating remote
