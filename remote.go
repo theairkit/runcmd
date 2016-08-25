@@ -283,7 +283,12 @@ func (cmd *RemoteCmd) Start() error {
 
 	cmd.initTimeouts()
 
-	return cmd.session.Start(strings.Join(cmd.args, " "))
+	args := []string{}
+	for _, arg := range cmd.args {
+		args = append(args, escapeCommandArgumentStrict(arg))
+	}
+
+	return cmd.session.Start(strings.Join(args, " "))
 }
 
 // Wait returns error after command execution if current command return nonzero
@@ -343,4 +348,18 @@ func (cmd *RemoteCmd) initTimeouts() {
 	}
 	cmd.connection.readTimeout = cmd.timeouts.SendTimeout
 	cmd.connection.writeTimeout = cmd.timeouts.ReceiveTimeout
+}
+
+func escapeCommandArgumentStrict(argument string) string {
+	escaper := strings.NewReplacer(
+		`\`, `\\`,
+		"`", "\\`",
+		`"`, `\"`,
+		`'`, `'\''`,
+		`$`, `\$`,
+	)
+
+	escaper.Replace(argument)
+
+	return `"` + argument + `"`
 }
