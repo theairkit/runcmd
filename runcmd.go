@@ -31,6 +31,7 @@ type CmdWorker interface {
 	StderrPipe() (io.Reader, error)
 	SetStdout(io.Writer)
 	SetStderr(io.Writer)
+	SetStdin(io.Reader)
 	GetArgs() []string
 }
 

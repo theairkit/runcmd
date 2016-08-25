@@ -70,6 +70,10 @@ func (cmd *LocalCmd) SetStderr(buffer io.Writer) {
 	cmd.cmd.Stderr = buffer
 }
 
+func (cmd *LocalCmd) SetStdin(reader io.Reader) {
+	cmd.cmd.Stdin = reader
+}
+
 // GetArgs returns cmdline for current worker
 func (cmd *LocalCmd) GetArgs() []string {
 	return cmd.cmd.Args

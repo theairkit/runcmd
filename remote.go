@@ -322,6 +322,10 @@ func (cmd *RemoteCmd) SetStderr(buffer io.Writer) {
 	cmd.session.Stderr = buffer
 }
 
+func (cmd *RemoteCmd) SetStdin(buffer io.Reader) {
+	cmd.session.Stdin = buffer
+}
+
 // GetArgs returns cmdline for current worker
 func (cmd *RemoteCmd) GetArgs() []string {
 	return cmd.args
