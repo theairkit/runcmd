@@ -6,22 +6,26 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"strings"
 	"time"
+
+	"github.com/reconquest/ser-go"
 
 	"golang.org/x/crypto/ssh"
 )
 
 // RemoteCmd is implementation of CmdWorker interface for remote commands
 type RemoteCmd struct {
-	cmdline    string
+	args       []string
 	session    *ssh.Session
 	connection *timeBoundedConnection
+	client     *ssh.Client
 	timeouts   *Timeouts
 }
 
 // Remote is implementation of Runner interface for remote commands
 type Remote struct {
-	serverConn *ssh.Client
+	client     *ssh.Client
 	connection *timeBoundedConnection
 	timeouts   *Timeouts
 }
@@ -116,7 +120,7 @@ func NewRemoteRawKeyAuthRunnerWithTimeouts(
 	connection.writeTimeout = 0
 
 	return &Remote{
-		serverConn: ssh.NewClient(sshConnection, channels, requests),
+		client:     ssh.NewClient(sshConnection, channels, requests),
 		connection: connection,
 		timeouts:   &timeouts,
 	}, nil
@@ -179,7 +183,7 @@ func NewRemotePassAuthRunnerWithTimeouts(
 	}
 
 	return &Remote{
-		serverConn: ssh.NewClient(sshConnection, channels, requests),
+		client:     ssh.NewClient(sshConnection, channels, requests),
 		connection: connection,
 		timeouts:   &timeouts,
 	}, nil
@@ -212,7 +216,7 @@ func NewRemoteKeyAuthRunner(user, host, key string) (*Remote, error) {
 	}
 
 	return &Remote{
-		serverConn: server,
+		client:     server,
 		connection: nil,
 		timeouts:   nil,
 	}, nil
@@ -231,57 +235,49 @@ func NewRemotePassAuthRunner(user, host, password string) (*Remote, error) {
 	}
 
 	return &Remote{
-		serverConn: server,
+		client:     server,
 		connection: nil,
 		timeouts:   nil,
 	}, nil
 }
 
 // Command creates worker for current command execution
-func (runner *Remote) Command(cmdline string) (CmdWorker, error) {
-	if cmdline == "" {
-		return nil, errors.New("command cannot be empty")
-	}
-
-	session, err := runner.serverConn.NewSession()
-	if err != nil {
-		return nil, err
-	}
-
+func (remote *Remote) Command(name string, arg ...string) CmdWorker {
 	return &RemoteCmd{
-		cmdline:    cmdline,
-		session:    session,
-		connection: runner.connection,
-		timeouts:   runner.timeouts,
-	}, nil
+		args:       append([]string{name}, arg...),
+		connection: remote.connection,
+		timeouts:   remote.timeouts,
+		client:     remote.client,
+	}
 }
 
 // CloseConnection is method for closing ssh connection of current runner
-func (runner *Remote) CloseConnection() error {
-	return runner.serverConn.Close()
+func (remote *Remote) CloseConnection() error {
+	return remote.client.Close()
 }
 
-// Run executes current command and returns output splitted by newline
-func (cmd *RemoteCmd) Run() (result []string, err error) {
-	defer func() {
-		closeErr := cmd.session.Close()
-		if err == nil && closeErr != nil {
-			if closeErr.Error() != "EOF" {
-				err = errors.New("can't close ssh session: " + closeErr.Error())
-			}
-		}
-	}()
-
-	cmd.initTimeouts()
-
+// Run executes current command
+func (cmd *RemoteCmd) Run() error {
 	return run(cmd)
+}
+
+func (cmd *RemoteCmd) Output() ([]byte, []byte, error) {
+	return output(cmd)
 }
 
 // Start begins current command execution
 func (cmd *RemoteCmd) Start() error {
+	var err error
+	cmd.session, err = cmd.client.NewSession()
+	if err != nil {
+		return ser.Errorf(
+			err, "can't create ssh session",
+		)
+	}
+
 	cmd.initTimeouts()
 
-	return cmd.session.Start(cmd.cmdline)
+	return cmd.session.Start(strings.Join(cmd.args, " "))
 }
 
 // Wait returns error after command execution if current command return nonzero
@@ -291,7 +287,9 @@ func (cmd *RemoteCmd) Wait() (err error) {
 		closeErr := cmd.session.Close()
 		if err == nil && closeErr != nil {
 			if closeErr.Error() != "EOF" {
-				err = errors.New("can't close ssh session: " + closeErr.Error())
+				err = ser.Errorf(
+					err, "can't close ssh session",
+				)
 			}
 		}
 	}()
@@ -324,9 +322,9 @@ func (cmd *RemoteCmd) SetStderr(buffer io.Writer) {
 	cmd.session.Stderr = buffer
 }
 
-// GetCommandLine returns cmdline for current worker
-func (cmd *RemoteCmd) GetCommandLine() string {
-	return cmd.cmdline
+// GetArgs returns cmdline for current worker
+func (cmd *RemoteCmd) GetArgs() []string {
+	return cmd.args
 }
 
 func (cmd *RemoteCmd) initTimeouts() {

@@ -4,69 +4,81 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"strings"
+
+	"github.com/reconquest/ser-go"
 )
 
-// ExecError is type for generating better error messages
+// ExecError represents error messages occured while executing command.
 type ExecError struct {
 	ExecutionError error
-	CommandLine    string
-	Output         []string
+	Args           []string
+	Output         []byte
 }
 
-// Runner is interface for creating workers
+// Runner creats command workers.
 type Runner interface {
-	Command(cmd string) (CmdWorker, error)
+	Command(name string, arg ...string) CmdWorker
 }
 
-// CmdWorker is interface for executing commands
+// CmdWorker executes commands.
 type CmdWorker interface {
-	Run() ([]string, error)
+	Run() error
+	Output() ([]byte, []byte, error)
 	Start() error
 	Wait() error
 	StdinPipe() (io.WriteCloser, error)
 	StdoutPipe() (io.Reader, error)
 	StderrPipe() (io.Reader, error)
-	SetStdout(buffer io.Writer)
-	SetStderr(buffer io.Writer)
-	GetCommandLine() string
-}
-
-func newExecError(
-	execErr error, cmdline string, output []string,
-) ExecError {
-	return ExecError{execErr, cmdline, output}
+	SetStdout(io.Writer)
+	SetStderr(io.Writer)
+	GetArgs() []string
 }
 
 func (err ExecError) Error() string {
 	errString := fmt.Sprintf(
-		"`%s` failed: %s", err.CommandLine, err.ExecutionError,
+		"%q failed: %s", err.Args, err.ExecutionError,
 	)
 
-	output := strings.Join(err.Output, "\n")
-	if strings.TrimSpace(output) != "" {
-		errString = errString + ", output: \n" + output
+	if len(err.Output) > 0 {
+		errString = errString + ", output: \n" + string(err.Output)
 	}
 
 	return errString
 }
 
-func run(worker CmdWorker) ([]string, error) {
-	var buffer bytes.Buffer
-
-	worker.SetStdout(&buffer)
-	worker.SetStderr(&buffer)
-
-	if err := worker.Start(); err != nil {
-		return nil, err
-	}
-
-	err := worker.Wait()
-	output := strings.Split(strings.Trim(buffer.String(), "\n"), "\n")
-
+func run(worker CmdWorker) error {
+	err := worker.Start()
 	if err != nil {
-		return nil, newExecError(err, worker.GetCommandLine(), output)
+		return ser.Errorf(
+			err, "can't exec %q", worker.GetArgs(),
+		)
 	}
 
-	return output, nil
+	err = worker.Wait()
+	if err != nil {
+		return ExecError{
+			ExecutionError: err,
+			Args:           worker.GetArgs(),
+		}
+	}
+
+	return nil
+}
+
+func output(worker CmdWorker) ([]byte, []byte, error) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	worker.SetStdout(&stdout)
+	worker.SetStderr(&stderr)
+
+	err := run(worker)
+	if err != nil {
+		if execErr, ok := err.(ExecError); ok {
+			execErr.Output = append(stdout.Bytes(), stderr.Bytes()...)
+		}
+		return nil, nil, err
+	}
+
+	return stdout.Bytes(), stderr.Bytes(), nil
 }

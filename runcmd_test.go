@@ -341,7 +341,7 @@ func TestQuotedRun(t *testing.T) {
 		t.Fatalf("Can't create command: %s", err.Error())
 	}
 
-	t.Log("Cmdline:", cmdLocal.GetCommandLine())
+	t.Log("Cmdline:", cmdLocal.GetArgsLine())
 
 	result, err := cmdLocal.Run()
 	if err != nil {
@@ -349,7 +349,7 @@ func TestQuotedRun(t *testing.T) {
 	}
 
 	if len(result) == 0 {
-		t.Fatalf("Command [%s] return empty result", cmdLocal.GetCommandLine())
+		t.Fatalf("Command [%s] return empty result", cmdLocal.GetArgsLine())
 	}
 
 	if result[0] != quotedMsg {
