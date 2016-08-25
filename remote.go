@@ -16,11 +16,12 @@ import (
 
 // RemoteCmd is implementation of CmdWorker interface for remote commands
 type RemoteCmd struct {
-	args       []string
-	session    *ssh.Session
-	connection *timeBoundedConnection
-	client     *ssh.Client
-	timeouts   *Timeouts
+	args         []string
+	session      *ssh.Session
+	sessionError error
+	connection   *timeBoundedConnection
+	client       *ssh.Client
+	timeouts     *Timeouts
 }
 
 // Remote is implementation of Runner interface for remote commands
@@ -243,11 +244,20 @@ func NewRemotePassAuthRunner(user, host, password string) (*Remote, error) {
 
 // Command creates worker for current command execution
 func (remote *Remote) Command(name string, arg ...string) CmdWorker {
+	session, err := remote.client.NewSession()
+	if err != nil {
+		err = ser.Errorf(
+			err, "can't create ssh session",
+		)
+	}
+
 	return &RemoteCmd{
-		args:       append([]string{name}, arg...),
-		connection: remote.connection,
-		timeouts:   remote.timeouts,
-		client:     remote.client,
+		args:         append([]string{name}, arg...),
+		connection:   remote.connection,
+		timeouts:     remote.timeouts,
+		client:       remote.client,
+		session:      session,
+		sessionError: err,
 	}
 }
 
@@ -267,12 +277,8 @@ func (cmd *RemoteCmd) Output() ([]byte, []byte, error) {
 
 // Start begins current command execution
 func (cmd *RemoteCmd) Start() error {
-	var err error
-	cmd.session, err = cmd.client.NewSession()
-	if err != nil {
-		return ser.Errorf(
-			err, "can't create ssh session",
-		)
+	if cmd.sessionError != nil {
+		return cmd.sessionError
 	}
 
 	cmd.initTimeouts()
