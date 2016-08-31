@@ -355,11 +355,10 @@ func escapeCommandArgumentStrict(argument string) string {
 		`\`, `\\`,
 		"`", "\\`",
 		`"`, `\"`,
-		`'`, `'\''`,
 		`$`, `\$`,
 	)
 
-	escaper.Replace(argument)
+	argument = escaper.Replace(argument)
 
 	return `"` + argument + `"`
 }
