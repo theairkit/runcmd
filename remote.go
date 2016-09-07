@@ -176,12 +176,21 @@ func NewRemotePassAuthRunnerWithTimeouts(
 		Conn: conn,
 	}
 
+	// We need to temporary switch on timeouts to prevent hanging
+	// on IO operations if server is successfully connected by TCP
+	// but give no response.
+	connection.readTimeout = timeouts.SendTimeout
+	connection.writeTimeout = timeouts.ReceiveTimeout
+
 	sshConnection, channels, requests, err := ssh.NewClientConn(
 		connection, host, config,
 	)
 	if err != nil {
 		return nil, err
 	}
+
+	connection.readTimeout = 0
+	connection.writeTimeout = 0
 
 	return &Remote{
 		client:     ssh.NewClient(sshConnection, channels, requests),
