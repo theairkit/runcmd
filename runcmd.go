@@ -15,7 +15,7 @@ type ExecError struct {
 	Output         []byte
 }
 
-// Runner creats command workers.
+// Runner creates command workers.
 type Runner interface {
 	Command(name string, arg ...string) CmdWorker
 }
