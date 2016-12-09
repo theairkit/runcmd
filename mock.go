@@ -20,12 +20,25 @@ type MockRunner struct {
 
 	// Error is a error which will be used to fail program's run.
 	Error error
+
+	// OnCommand is a callback which will be called on each Command() call with
+	// worker which will be similar to exec.Cmd.
+	OnCommand func(*MockRunnerWorker)
 }
 
 // Command returns standard CmdWorker with streams setup to return mocked
 // stdout and stderr.
 func (runner MockRunner) Command(name string, args ...string) CmdWorker {
-	return &MockRunnerWorker{MockRunner: runner, Args: args}
+	worker := &MockRunnerWorker{
+		MockRunner: runner,
+		Args:       append([]string{name}, args...),
+	}
+
+	if runner.OnCommand != nil {
+		runner.OnCommand(worker)
+	}
+
+	return worker
 }
 
 type MockRunnerWorker struct {

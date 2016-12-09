@@ -81,3 +81,53 @@ func TestMockRunner_ReturnsSetUserError(t *testing.T) {
 	test.Error(err)
 	test.Equal(runner.Error, err)
 }
+
+func TestMockRunner_ModifiesCommandUsingCallback(t *testing.T) {
+	test := assert.New(t)
+
+	runner := MockRunner{
+		Stdout: []byte("original"),
+
+		OnCommand: func(worker *MockRunnerWorker) {
+			worker.Stdout = []byte("injected")
+		},
+	}
+
+	command := runner.Command("test")
+	test.NotNil(command)
+
+	stdout, _, err := command.Output()
+	test.NoError(err)
+	test.Equal([]byte("injected"), stdout)
+}
+
+func TestMockRunner_ReturnsDifferentOutputOnDifferentArgs(t *testing.T) {
+	test := assert.New(t)
+
+	runner := MockRunner{
+		OnCommand: func(worker *MockRunnerWorker) {
+			switch worker.GetArgs()[0] {
+			case "first":
+				worker.Stdout = []byte("result 1")
+			case "second":
+				worker.Stdout = []byte("result 2")
+			default:
+				worker.Stdout = []byte{}
+			}
+		},
+	}
+
+	command := runner.Command("first")
+	test.NotNil(command)
+
+	stdout, _, err := command.Output()
+	test.NoError(err)
+	test.Equal([]byte("result 1"), stdout)
+
+	command = runner.Command("second")
+	test.NotNil(command)
+
+	stdout, _, err = command.Output()
+	test.NoError(err)
+	test.Equal([]byte("result 2"), stdout)
+}
