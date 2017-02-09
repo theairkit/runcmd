@@ -319,16 +319,28 @@ func (cmd *RemoteCmd) Wait() (err error) {
 
 // StdinPipe returns stdin of current worker
 func (cmd *RemoteCmd) StdinPipe() (io.WriteCloser, error) {
+	if cmd.sessionError != nil {
+		return nil, cmd.sessionError
+	}
+
 	return cmd.session.StdinPipe()
 }
 
 // StdoutPipe returns stdout of current worker
 func (cmd *RemoteCmd) StdoutPipe() (io.Reader, error) {
+	if cmd.sessionError != nil {
+		return nil, cmd.sessionError
+	}
+
 	return cmd.session.StdoutPipe()
 }
 
 // StderrPipe returns stderr of current worker
 func (cmd *RemoteCmd) StderrPipe() (io.Reader, error) {
+	if cmd.sessionError != nil {
+		return nil, cmd.sessionError
+	}
+
 	return cmd.session.StderrPipe()
 }
 
