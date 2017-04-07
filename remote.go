@@ -82,8 +82,9 @@ func NewRemoteRawKeyAuthRunnerWithTimeouts(
 	}
 
 	config := &ssh.ClientConfig{
-		User: user,
-		Auth: []ssh.AuthMethod{ssh.PublicKeys(signer)},
+		User:            user,
+		Auth:            []ssh.AuthMethod{ssh.PublicKeys(signer)},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
 	dialer := net.Dialer{
@@ -154,8 +155,9 @@ func NewRemotePassAuthRunnerWithTimeouts(
 	user, host, password string, timeouts Timeouts,
 ) (*Remote, error) {
 	config := &ssh.ClientConfig{
-		User: user,
-		Auth: []ssh.AuthMethod{ssh.Password(password)},
+		User:            user,
+		Auth:            []ssh.AuthMethod{ssh.Password(password)},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
 	dialer := net.Dialer{
@@ -216,8 +218,9 @@ func NewRemoteKeyAuthRunner(user, host, key string) (*Remote, error) {
 	}
 
 	config := &ssh.ClientConfig{
-		User: user,
-		Auth: []ssh.AuthMethod{ssh.PublicKeys(signer)},
+		User:            user,
+		Auth:            []ssh.AuthMethod{ssh.PublicKeys(signer)},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
 	server, err := ssh.Dial("tcp", host, config)
@@ -235,8 +238,9 @@ func NewRemoteKeyAuthRunner(user, host, key string) (*Remote, error) {
 // NewRemotePassAuthRunner is one of functions for creating remote runner
 func NewRemotePassAuthRunner(user, host, password string) (*Remote, error) {
 	config := &ssh.ClientConfig{
-		User: user,
-		Auth: []ssh.AuthMethod{ssh.Password(password)},
+		User:            user,
+		Auth:            []ssh.AuthMethod{ssh.Password(password)},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
 	server, err := ssh.Dial("tcp", host, config)
