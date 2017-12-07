@@ -66,6 +66,10 @@ type MockRunnerWorker struct {
 	}
 }
 
+func (worker *MockRunnerWorker) CmdError() error {
+	return nil
+}
+
 // Run runs Start() and then Wait().
 func (worker *MockRunnerWorker) Run() error {
 	err := worker.Start()

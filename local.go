@@ -25,6 +25,11 @@ func (local *Local) Command(name string, arg ...string) CmdWorker {
 	}
 }
 
+// stub to suite interface
+func (local *LocalCmd) CmdError() error {
+	return nil
+}
+
 // Run executes current command and retuns output splitted by newline
 func (cmd *LocalCmd) Run() error {
 	return run(cmd)

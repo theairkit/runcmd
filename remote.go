@@ -279,6 +279,10 @@ func (remote *Remote) CloseConnection() error {
 	return remote.client.Close()
 }
 
+func (remote *RemoteCmd) CmdError() error {
+	return remote.sessionError
+}
+
 // Run executes current command
 func (cmd *RemoteCmd) Run() error {
 	return run(cmd)
