@@ -33,6 +33,7 @@ type CmdWorker interface {
 	SetStderr(io.Writer)
 	SetStdin(io.Reader)
 	GetArgs() []string
+	CmdError() error
 }
 
 func (err ExecError) Error() string {
